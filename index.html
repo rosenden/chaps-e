@@ -133,7 +133,83 @@
 
           <div class="modal-actions">
             <button id="password-cancel" type="button">Cancel</button>
-            <button id="password-confirm-btn" type="submit">Update password</button>
+            <button id="password-confirm-btn" type="submit" disabled>Update password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="create-user-modal" class="save-modal" hidden>
+      <div class="create-user-dialog" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+        <h2 id="create-user-title">Create user</h2>
+        <p id="create-user-subtitle" class="login-subtitle">Create a new active account.</p>
+
+        <form id="create-user-form" class="save-form">
+          <label>
+            <span id="create-user-email-label">Email</span>
+            <input
+              id="create-user-email"
+              type="email"
+              autocomplete="off"
+              placeholder="name@company.com"
+              required
+            />
+          </label>
+
+          <label>
+            <span id="create-user-password-label">Password</span>
+            <input
+              id="create-user-password"
+              type="password"
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Minimum 6 characters"
+              required
+            />
+          </label>
+
+          <label>
+            <span id="create-user-confirm-label">Confirm password</span>
+            <input
+              id="create-user-confirm"
+              type="password"
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Confirm password"
+              required
+            />
+          </label>
+
+          <label>
+            <span id="create-user-nom-label">Last name</span>
+            <input id="create-user-nom" type="text" maxlength="80" autocomplete="off" placeholder="Doe" required />
+          </label>
+
+          <label>
+            <span id="create-user-prenom-label">First name</span>
+            <input
+              id="create-user-prenom"
+              type="text"
+              maxlength="80"
+              autocomplete="off"
+              placeholder="John"
+              required
+            />
+          </label>
+
+          <label>
+            <span id="create-user-role-label">Role</span>
+            <select id="create-user-role" required>
+              <option id="create-user-role-user" value="user">User</option>
+              <option id="create-user-role-admin" value="admin">Admin</option>
+            </select>
+          </label>
+
+          <p id="create-user-error" class="save-error" aria-live="polite"></p>
+
+          <div class="modal-actions">
+            <button id="create-user-cancel" type="button">Cancel</button>
+            <button id="create-user-confirm-btn" type="submit">Create user</button>
           </div>
         </form>
       </div>
@@ -142,7 +218,7 @@
     <div id="app-shell" class="app-shell">
       <aside class="sidebar">
         <div class="brand-block">
-          <div class="brand-row">
+          <button id="brand-home" class="brand-row brand-home" type="button" aria-label="Home">
             <img
               class="brand-icon"
               src="assets/logos/icone-chapsvision-white.png"
@@ -154,7 +230,7 @@
               <h1 class="brand-title">Chaps-e Generator</h1>
               <p class="brand-sub">by ChapsVision</p>
             </div>
-          </div>
+          </button>
         </div>
 
         <nav class="sidebar-nav">
@@ -162,13 +238,13 @@
             <i class="fa-regular fa-image icon-inline" aria-hidden="true"></i>
             <span id="nav-generator-label">Generator</span>
           </button>
-          <button id="nav-guide" class="nav-btn" type="button" data-view="guide">
-            <i class="fa-regular fa-circle-question icon-inline" aria-hidden="true"></i>
-            <span id="nav-guide-label">Guide</span>
-          </button>
           <button id="nav-my-chaps" class="nav-btn" type="button" data-view="my-chaps">
             <i class="fa-regular fa-folder-open icon-inline" aria-hidden="true"></i>
             <span id="nav-my-chaps-label">My library</span>
+          </button>
+          <button id="nav-guide" class="nav-btn" type="button" data-view="guide">
+            <i class="fa-regular fa-circle-question icon-inline" aria-hidden="true"></i>
+            <span id="nav-guide-label">Guide</span>
           </button>
         </nav>
 
@@ -196,6 +272,10 @@
               <button id="password-btn" type="button">
                 <i class="fa-regular fa-pen-to-square icon-inline" aria-hidden="true"></i>
                 <span id="password-btn-label">Change password</span>
+              </button>
+              <button id="create-user-btn" type="button" hidden>
+                <i class="fa-solid fa-user-plus icon-inline" aria-hidden="true"></i>
+                <span id="create-user-btn-label">Create user</span>
               </button>
               <button id="logout-btn" type="button">
                 <i class="fa-regular fa-circle-user icon-inline" aria-hidden="true"></i>

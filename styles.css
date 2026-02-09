@@ -61,7 +61,28 @@ body {
 .brand-row {
   display: flex;
   align-items: flex-start;
+  justify-content: flex-start;
   gap: 0.55rem;
+}
+
+.brand-home {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.brand-home:hover {
+  filter: brightness(1.08);
+}
+
+.brand-home:focus-visible {
+  outline: 2px solid rgba(220, 239, 227, 0.7);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
 }
 
 .brand-copy {
@@ -520,7 +541,9 @@ button {
 
 #save-menu-trigger,
 #login-submit,
-#save-confirm {
+#save-confirm,
+#password-confirm-btn,
+#create-user-confirm-btn {
   color: #fdfefe;
   border-color: var(--cv-primary);
   background: var(--cv-primary);
@@ -528,9 +551,17 @@ button {
 
 #save-menu-trigger:hover,
 #login-submit:hover,
-#save-confirm:hover {
+#save-confirm:hover,
+#password-confirm-btn:not(:disabled):hover,
+#create-user-confirm-btn:not(:disabled):hover {
   background: var(--cv-primary-600);
   border-color: var(--cv-primary-600);
+}
+
+#password-confirm-btn:disabled,
+#create-user-confirm-btn:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
 .save-dropdown {
@@ -575,7 +606,8 @@ button {
 }
 
 .login-form input,
-.save-form input {
+.save-form input,
+.save-form select {
   width: 100%;
   border: 1px solid rgba(68, 85, 86, 0.24);
   border-radius: var(--radius-md);
@@ -583,6 +615,11 @@ button {
   color: var(--cv-noir);
   font-size: 0.92rem;
   padding: 0.54rem 0.86rem;
+}
+
+.save-form select {
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .state {
@@ -1048,6 +1085,15 @@ button {
   padding: 1rem;
 }
 
+.create-user-dialog {
+  width: min(460px, calc(100% - 2rem));
+  border-radius: var(--radius-xl);
+  background: #fdfefe;
+  border: 1px solid rgba(185, 196, 213, 0.8);
+  box-shadow: 0 24px 48px rgba(24, 33, 30, 0.35);
+  padding: 1rem;
+}
+
 .login-dialog h2 {
   margin: 0;
   font-size: 1.25rem;
@@ -1060,6 +1106,11 @@ button {
 }
 
 .password-dialog h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.create-user-dialog h2 {
   margin: 0;
   font-size: 1.25rem;
 }
@@ -1121,6 +1172,12 @@ button {
 }
 
 #save-cancel {
+  border-color: rgba(93, 115, 116, 0.25);
+  color: var(--cv-sage-900);
+  background: rgba(93, 115, 116, 0.12);
+}
+
+#create-user-cancel {
   border-color: rgba(93, 115, 116, 0.25);
   color: var(--cv-sage-900);
   background: rgba(93, 115, 116, 0.12);

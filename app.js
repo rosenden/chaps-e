@@ -132,7 +132,7 @@ const I18N = {
     role_label: "{role}",
     role_admin: "Admin",
     role_user: "User",
-    language_toggle: "Switch to French",
+    language_toggle: "Passe en 🇫🇷 Français",
     password_btn: "Change password",
     password_modal_title: "Change password",
     password_modal_subtitle: "Set your new account password.",
@@ -147,6 +147,34 @@ const I18N = {
     password_error_mismatch: "Passwords do not match.",
     password_error_too_short: "Password must be at least 6 characters.",
     password_error: "Password reset failed: {message}",
+    create_user_btn: "Create user",
+    create_user_modal_title: "Create user",
+    create_user_modal_subtitle: "Create a new active account.",
+    create_user_email_label: "Email",
+    create_user_email_placeholder: "name@company.com",
+    create_user_password_label: "Password",
+    create_user_password_placeholder: "Minimum 6 characters",
+    create_user_confirm_label: "Confirm password",
+    create_user_confirm_placeholder: "Confirm password",
+    create_user_nom_label: "Last name",
+    create_user_nom_placeholder: "Doe",
+    create_user_prenom_label: "First name",
+    create_user_prenom_placeholder: "John",
+    create_user_role_label: "Role",
+    create_user_role_user: "User",
+    create_user_role_admin: "Admin",
+    create_user_cancel: "Cancel",
+    create_user_confirm: "Create user",
+    create_user_success: "User created and active.",
+    create_user_error_not_admin: "Only admin can create users.",
+    create_user_error_required: "All fields are required.",
+    create_user_error_email_invalid: "Invalid email.",
+    create_user_error_password_short: "Password must be at least 6 characters.",
+    create_user_error_password_mismatch: "Passwords do not match.",
+    create_user_error_supabase: "Supabase not configured.",
+    create_user_error_connect: "Sign in first.",
+    create_user_error_email_exists: "This email already exists.",
+    create_user_error_failed: "Create user failed: {message}",
     logout_btn: "Sign out",
     panel_title: "Configuration",
     picker_left_arm: "Left arm",
@@ -232,7 +260,7 @@ const I18N = {
     role_label: "{role}",
     role_admin: "Admin",
     role_user: "Utilisateur",
-    language_toggle: "Passer en anglais",
+    language_toggle: "Passe en 🇬🇧 Anglais",
     password_btn: "Modifier mon mot de passe",
     password_modal_title: "Modifier le mot de passe",
     password_modal_subtitle: "Definis ton nouveau mot de passe de compte.",
@@ -247,6 +275,34 @@ const I18N = {
     password_error_mismatch: "Les mots de passe ne correspondent pas.",
     password_error_too_short: "Le mot de passe doit faire au moins 6 caracteres.",
     password_error: "Echec reinitialisation mot de passe: {message}",
+    create_user_btn: "Creer un utilisateur",
+    create_user_modal_title: "Creer un utilisateur",
+    create_user_modal_subtitle: "Creer un nouveau compte actif.",
+    create_user_email_label: "Email",
+    create_user_email_placeholder: "nom@entreprise.com",
+    create_user_password_label: "Mot de passe",
+    create_user_password_placeholder: "Minimum 6 caracteres",
+    create_user_confirm_label: "Confirmer le mot de passe",
+    create_user_confirm_placeholder: "Confirmer le mot de passe",
+    create_user_nom_label: "Nom",
+    create_user_nom_placeholder: "Dupont",
+    create_user_prenom_label: "Prenom",
+    create_user_prenom_placeholder: "Jean",
+    create_user_role_label: "Role",
+    create_user_role_user: "Utilisateur",
+    create_user_role_admin: "Admin",
+    create_user_cancel: "Annuler",
+    create_user_confirm: "Creer l'utilisateur",
+    create_user_success: "Utilisateur cree et actif.",
+    create_user_error_not_admin: "Seul un admin peut creer des utilisateurs.",
+    create_user_error_required: "Tous les champs sont obligatoires.",
+    create_user_error_email_invalid: "Email invalide.",
+    create_user_error_password_short: "Le mot de passe doit faire au moins 6 caracteres.",
+    create_user_error_password_mismatch: "Les mots de passe ne correspondent pas.",
+    create_user_error_supabase: "Supabase non configure.",
+    create_user_error_connect: "Connecte-toi d'abord.",
+    create_user_error_email_exists: "Cet email existe deja.",
+    create_user_error_failed: "Creation utilisateur impossible: {message}",
     logout_btn: "Se deconnecter",
     panel_title: "Configuration",
     picker_left_arm: "Bras gauche",
@@ -373,8 +429,20 @@ const ui = {
   passwordForm: byId("password-form"),
   passwordNewInput: byId("password-new-input"),
   passwordConfirmInput: byId("password-confirm-input"),
+  passwordConfirmBtn: byId("password-confirm-btn"),
   passwordModalError: byId("password-modal-error"),
   passwordCancel: byId("password-cancel"),
+  createUserModal: byId("create-user-modal"),
+  createUserForm: byId("create-user-form"),
+  createUserEmail: byId("create-user-email"),
+  createUserPassword: byId("create-user-password"),
+  createUserConfirm: byId("create-user-confirm"),
+  createUserNom: byId("create-user-nom"),
+  createUserPrenom: byId("create-user-prenom"),
+  createUserRole: byId("create-user-role"),
+  createUserError: byId("create-user-error"),
+  createUserCancel: byId("create-user-cancel"),
+  createUserConfirmBtn: byId("create-user-confirm-btn"),
 
   navGenerator: byId("nav-generator"),
   navGuide: byId("nav-guide"),
@@ -382,6 +450,7 @@ const ui = {
   viewGenerator: byId("view-generator"),
   viewGuide: byId("view-guide"),
   viewMyChaps: byId("view-my-chaps"),
+  brandHome: byId("brand-home"),
 
   accountName: byId("account-name"),
   accountRole: byId("account-role"),
@@ -390,6 +459,7 @@ const ui = {
   profileMenu: byId("profile-menu"),
   langToggleBtn: byId("lang-toggle-btn"),
   passwordBtn: byId("password-btn"),
+  createUserBtn: byId("create-user-btn"),
   logoutBtn: byId("logout-btn"),
 
   skin: byId("skin"),
@@ -570,7 +640,25 @@ function applyStaticTranslations() {
   setText("nav-my-chaps-label", t("nav_my_chaps"));
   setText("lang-toggle-label", t("language_toggle"));
   setText("password-btn-label", t("password_btn"));
+  setText("create-user-btn-label", t("create_user_btn"));
   setText("logout-btn-label", t("logout_btn"));
+  setText("create-user-title", t("create_user_modal_title"));
+  setText("create-user-subtitle", t("create_user_modal_subtitle"));
+  setText("create-user-email-label", t("create_user_email_label"));
+  setText("create-user-password-label", t("create_user_password_label"));
+  setText("create-user-confirm-label", t("create_user_confirm_label"));
+  setText("create-user-nom-label", t("create_user_nom_label"));
+  setText("create-user-prenom-label", t("create_user_prenom_label"));
+  setText("create-user-role-label", t("create_user_role_label"));
+  setText("create-user-role-user", t("create_user_role_user"));
+  setText("create-user-role-admin", t("create_user_role_admin"));
+  setText("create-user-cancel", t("create_user_cancel"));
+  setText("create-user-confirm-btn", t("create_user_confirm"));
+  ui.createUserEmail.placeholder = t("create_user_email_placeholder");
+  ui.createUserPassword.placeholder = t("create_user_password_placeholder");
+  ui.createUserConfirm.placeholder = t("create_user_confirm_placeholder");
+  ui.createUserNom.placeholder = t("create_user_nom_placeholder");
+  ui.createUserPrenom.placeholder = t("create_user_prenom_placeholder");
 
   setText("panel-title", t("panel_title"));
   setText("picker-left-arm-label", t("picker_left_arm"));
@@ -660,6 +748,7 @@ async function handleAuthSession(session) {
   if (session?.user) {
     setCurrentUser(session.user);
     await ensureUserProfile(session.user);
+    updateAccountUi();
     ui.loginError.textContent = "";
     hideLoginModal();
     await renderMyChaps();
@@ -787,6 +876,7 @@ function bindEvents() {
   ui.loginForm.addEventListener("submit", onLoginSubmit);
   ui.logoutBtn.addEventListener("click", onLogoutClick);
   ui.passwordBtn.addEventListener("click", onPasswordResetClick);
+  ui.createUserBtn.addEventListener("click", onCreateUserClick);
   ui.langToggleBtn.addEventListener("click", onLanguageToggleClick);
   ui.profileMenuTrigger.addEventListener("click", (event) => {
     event.preventDefault();
@@ -800,12 +890,22 @@ function bindEvents() {
   ui.saveCancel.addEventListener("click", hideSaveModal);
   ui.passwordForm.addEventListener("submit", onPasswordModalSubmit);
   ui.passwordCancel.addEventListener("click", hidePasswordModal);
+  ui.createUserForm.addEventListener("submit", onCreateUserSubmit);
+  ui.createUserCancel.addEventListener("click", hideCreateUserModal);
+  ui.passwordNewInput.addEventListener("input", onPasswordFieldsInput);
+  ui.passwordConfirmInput.addEventListener("input", onPasswordFieldsInput);
 
   ui.navGenerator.addEventListener("click", () => showView("generator"));
   ui.navGuide.addEventListener("click", () => showView("guide"));
   ui.navMyChaps.addEventListener("click", async () => {
     showView("my-chaps");
     await renderMyChaps();
+  });
+  ui.brandHome.addEventListener("click", () => {
+    closeProfileMenu();
+    closeSaveMenu();
+    closeAllPickerMenus();
+    showView("generator");
   });
   ui.guidePrevBtn.addEventListener("click", () => shiftGuideCase(-1));
   ui.guideNextBtn.addEventListener("click", () => shiftGuideCase(1));
@@ -1497,6 +1597,7 @@ async function onLoginSubmit(event) {
 async function onLogoutClick() {
   hideSaveModal();
   hidePasswordModal();
+  hideCreateUserModal();
   closeSaveMenu();
   closeProfileMenu();
 
@@ -1533,6 +1634,26 @@ async function onPasswordResetClick() {
   }
 
   showPasswordModal();
+}
+
+async function onCreateUserClick() {
+  closeProfileMenu();
+
+  if (!supabaseReady || !supabase) {
+    ui.loginError.textContent = t("create_user_error_supabase");
+    return;
+  }
+  if (!currentUser?.id) {
+    showLoginModal();
+    ui.loginError.textContent = t("create_user_error_connect");
+    return;
+  }
+  if (!isCurrentUserAdmin()) {
+    ui.loginError.textContent = t("create_user_error_not_admin");
+    return;
+  }
+
+  showCreateUserModal();
 }
 
 async function onPasswordModalSubmit(event) {
@@ -1579,11 +1700,101 @@ async function onPasswordModalSubmit(event) {
   alert(t("password_success"));
 }
 
+function onPasswordFieldsInput() {
+  if (ui.passwordModalError.textContent) {
+    ui.passwordModalError.textContent = "";
+  }
+  updatePasswordSubmitState();
+}
+
+function isPasswordFormValid() {
+  const newPassword = String(ui.passwordNewInput.value || "").trim();
+  const confirmPassword = String(ui.passwordConfirmInput.value || "").trim();
+  if (!newPassword || !confirmPassword) {
+    return false;
+  }
+  return newPassword === confirmPassword;
+}
+
+function updatePasswordSubmitState() {
+  ui.passwordConfirmBtn.disabled = !isPasswordFormValid();
+}
+
 async function onLanguageToggleClick() {
   closeProfileMenu();
   const next = currentLanguage === "en" ? "fr" : "en";
   setLanguage(next);
   await renderMyChaps();
+}
+
+async function onCreateUserSubmit(event) {
+  event.preventDefault();
+  ui.createUserError.textContent = "";
+
+  if (!supabaseReady || !supabase) {
+    ui.createUserError.textContent = t("create_user_error_supabase");
+    return;
+  }
+  if (!currentUser?.id) {
+    hideCreateUserModal();
+    showLoginModal();
+    ui.loginError.textContent = t("create_user_error_connect");
+    return;
+  }
+  if (!isCurrentUserAdmin()) {
+    ui.createUserError.textContent = t("create_user_error_not_admin");
+    return;
+  }
+
+  const email = String(ui.createUserEmail.value || "").trim().toLowerCase();
+  const password = String(ui.createUserPassword.value || "");
+  const confirm = String(ui.createUserConfirm.value || "");
+  const nom = String(ui.createUserNom.value || "").trim();
+  const prenom = String(ui.createUserPrenom.value || "").trim();
+  const role = USER_ROLES.includes(String(ui.createUserRole.value || "")) ? ui.createUserRole.value : "user";
+
+  if (!email || !password || !confirm || !nom || !prenom || !role) {
+    ui.createUserError.textContent = t("create_user_error_required");
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    ui.createUserError.textContent = t("create_user_error_email_invalid");
+    return;
+  }
+  if (password.length < 6) {
+    ui.createUserError.textContent = t("create_user_error_password_short");
+    return;
+  }
+  if (password !== confirm) {
+    ui.createUserError.textContent = t("create_user_error_password_mismatch");
+    return;
+  }
+
+  ui.createUserConfirmBtn.disabled = true;
+
+  const { error } = await supabase.functions.invoke("admin-create-user", {
+    body: { email, password, nom, prenom, role },
+  });
+
+  ui.createUserConfirmBtn.disabled = false;
+
+  if (error) {
+    const message = String(error.message || "");
+    const details = message.toLowerCase();
+    if (details.includes("email_already_exists") || details.includes("duplicate")) {
+      ui.createUserError.textContent = t("create_user_error_email_exists");
+      return;
+    }
+    if (details.includes("forbidden")) {
+      ui.createUserError.textContent = t("create_user_error_not_admin");
+      return;
+    }
+    ui.createUserError.textContent = t("create_user_error_failed", { message });
+    return;
+  }
+
+  hideCreateUserModal();
+  alert(t("create_user_success"));
 }
 
 function setCurrentUser(user) {
@@ -1596,6 +1807,7 @@ function updateAccountUi() {
     ui.accountName.textContent = t("profile_not_connected");
     ui.accountRole.textContent = t("role_label", { role: t("role_user") });
     ui.profileAvatar.textContent = "CV";
+    ui.createUserBtn.hidden = true;
     return;
   }
 
@@ -1604,14 +1816,17 @@ function updateAccountUi() {
   const fallbackEmail = String(currentUser.email || currentUser.id || "").trim();
   const displayName = fullName || fallbackEmail;
   const role = profile?.role === "admin" ? "admin" : "user";
+  const isAdmin = role === "admin";
 
   ui.accountName.textContent = displayName || t("profile_connected", { email: fallbackEmail });
   ui.accountRole.textContent = t("role_label", { role: t(`role_${role}`) });
   ui.profileAvatar.textContent = buildInitials(displayName || fallbackEmail);
+  ui.createUserBtn.hidden = !isAdmin;
 }
 
 function showLoginModal() {
   hidePasswordModal();
+  hideCreateUserModal();
   ui.loginModal.hidden = false;
   lockApp();
 }
@@ -1651,6 +1866,7 @@ function hideSaveModal() {
 function showPasswordModal() {
   ui.passwordModal.hidden = false;
   ui.passwordModalError.textContent = "";
+  updatePasswordSubmitState();
   lockApp();
   ui.passwordNewInput.focus();
 }
@@ -1661,6 +1877,29 @@ function hidePasswordModal() {
   if (ui.passwordForm) {
     ui.passwordForm.reset();
   }
+  updatePasswordSubmitState();
+  unlockApp();
+}
+
+function showCreateUserModal() {
+  ui.createUserModal.hidden = false;
+  ui.createUserError.textContent = "";
+  if (ui.createUserForm) {
+    ui.createUserForm.reset();
+  }
+  ui.createUserRole.value = "user";
+  ui.createUserConfirmBtn.disabled = false;
+  lockApp();
+  ui.createUserEmail.focus();
+}
+
+function hideCreateUserModal() {
+  ui.createUserModal.hidden = true;
+  ui.createUserError.textContent = "";
+  if (ui.createUserForm) {
+    ui.createUserForm.reset();
+  }
+  ui.createUserConfirmBtn.disabled = false;
   unlockApp();
 }
 
@@ -1669,9 +1908,13 @@ function lockApp() {
 }
 
 function unlockApp() {
-  if (ui.loginModal.hidden && ui.saveModal.hidden && ui.passwordModal.hidden) {
+  if (ui.loginModal.hidden && ui.saveModal.hidden && ui.passwordModal.hidden && ui.createUserModal.hidden) {
     document.body.classList.remove("is-locked");
   }
+}
+
+function isCurrentUserAdmin() {
+  return currentUserProfile?.role === "admin";
 }
 
 function showView(view) {
