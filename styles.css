@@ -93,6 +93,9 @@ body {
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
+  display: block;
+  object-fit: contain;
+  object-position: center;
   margin-top: 0.02rem;
 }
 
