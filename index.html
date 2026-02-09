@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chaps-e Generator by ChapsVision</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/fontawesome.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/regular.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/solid.min.css"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="login-modal" class="login-modal" hidden>
+      <div class="login-dialog" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <img
+          class="login-brand"
+          src="assets/logos/logo-chapsvision-sauge.png"
+          alt="ChapsVision"
+          width="180"
+          height="50"
+        />
+        <h2 id="login-title">Sign in</h2>
+        <p id="login-subtitle" class="login-subtitle">Internal ChapsVision account</p>
+
+        <form id="login-form" class="login-form">
+          <label>
+            <span id="login-email-label">Email</span>
+            <input
+              id="login-email"
+              type="email"
+              autocomplete="email"
+              placeholder="name@company.com"
+              required
+            />
+          </label>
+
+          <label>
+            <span id="login-password-label">Password</span>
+            <input
+              id="login-password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              required
+            />
+          </label>
+
+          <p id="login-error" class="login-error" aria-live="polite"></p>
+
+          <div class="modal-actions">
+            <button id="login-submit" type="submit">Sign in</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+    <div id="save-modal" class="save-modal" hidden>
+      <div class="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-title">
+        <h2 id="save-title">Name your Chap-e</h2>
+        <p id="save-subtitle" class="login-subtitle">This name will be used in your library.</p>
+
+        <form id="save-form" class="save-form">
+          <label>
+            <span id="save-name-label">Chap-e name</span>
+            <input
+              id="save-modal-name"
+              type="text"
+              maxlength="60"
+              autocomplete="off"
+              placeholder="e.g. Support Mascot"
+              required
+            />
+          </label>
+
+          <p id="save-modal-error" class="save-error" aria-live="polite"></p>
+
+          <div class="modal-actions">
+            <button id="save-cancel" type="button">Cancel</button>
+            <button id="save-confirm" type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="password-modal" class="save-modal" hidden>
+      <div class="password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-title">
+        <h2 id="password-title">Change password</h2>
+        <p id="password-subtitle" class="login-subtitle">Set your new account password.</p>
+
+        <form id="password-form" class="save-form">
+          <label>
+            <span id="password-new-label">New password</span>
+            <input
+              id="password-new-input"
+              type="password"
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Enter new password"
+              required
+            />
+          </label>
+
+          <label>
+            <span id="password-confirm-label">Confirm password</span>
+            <input
+              id="password-confirm-input"
+              type="password"
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Confirm new password"
+              required
+            />
+          </label>
+
+          <p id="password-modal-error" class="save-error" aria-live="polite"></p>
+
+          <div class="modal-actions">
+            <button id="password-cancel" type="button">Cancel</button>
+            <button id="password-confirm-btn" type="submit">Update password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="app-shell" class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-row">
+            <img
+              class="brand-icon"
+              src="assets/logos/icone-chapsvision-white.png"
+              alt="ChapsVision icon"
+              width="30"
+              height="30"
+            />
+            <div class="brand-copy">
+              <h1 class="brand-title">Chaps-e Generator</h1>
+              <p class="brand-sub">by ChapsVision</p>
+            </div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button id="nav-generator" class="nav-btn is-active" type="button" data-view="generator">
+            <i class="fa-regular fa-image icon-inline" aria-hidden="true"></i>
+            <span id="nav-generator-label">Generator</span>
+          </button>
+          <button id="nav-guide" class="nav-btn" type="button" data-view="guide">
+            <i class="fa-regular fa-circle-question icon-inline" aria-hidden="true"></i>
+            <span id="nav-guide-label">Guide</span>
+          </button>
+          <button id="nav-my-chaps" class="nav-btn" type="button" data-view="my-chaps">
+            <i class="fa-regular fa-folder-open icon-inline" aria-hidden="true"></i>
+            <span id="nav-my-chaps-label">My library</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-profile">
+          <div id="profile-avatar" class="profile-avatar" aria-hidden="true">CV</div>
+          <div class="profile-meta">
+            <p id="account-name" class="account-name">Not connected</p>
+            <p id="account-role" class="account-role">User</p>
+          </div>
+          <div class="profile-menu-wrap">
+            <button
+              id="profile-menu-trigger"
+              class="profile-menu-trigger"
+              type="button"
+              aria-expanded="false"
+              aria-label="Menu profil"
+            >
+              <i class="fa-solid fa-ellipsis icon-inline" aria-hidden="true"></i>
+            </button>
+            <div id="profile-menu" class="profile-menu" hidden>
+              <button id="lang-toggle-btn" type="button">
+                <i class="fa-solid fa-language icon-inline" aria-hidden="true"></i>
+                <span id="lang-toggle-label">Switch to French</span>
+              </button>
+              <button id="password-btn" type="button">
+                <i class="fa-regular fa-pen-to-square icon-inline" aria-hidden="true"></i>
+                <span id="password-btn-label">Change password</span>
+              </button>
+              <button id="logout-btn" type="button">
+                <i class="fa-regular fa-circle-user icon-inline" aria-hidden="true"></i>
+                <span id="logout-btn-label">Sign out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section id="view-generator" class="view is-active">
+          <div class="generator-layout">
+            <section class="panel">
+              <header class="panel-header">
+                <h2 id="panel-title">Configuration</h2>
+              </header>
+
+              <div class="controls">
+                <div class="visual-controls">
+                  <div class="picker" data-picker="skin">
+                    <button id="picker-skin-trigger" class="picker-trigger" type="button" aria-expanded="false">
+                      <span class="picker-trigger-label">Skin</span>
+                      <span id="picker-skin-current" class="picker-trigger-current"></span>
+                      <span class="picker-trigger-chevron" aria-hidden="true">
+                        <i class="fa-regular fa-circle-down"></i>
+                      </span>
+                    </button>
+                    <div id="picker-skin-menu" class="picker-menu" hidden></div>
+                  </div>
+
+                  <div class="picker" data-picker="left-arm">
+                    <button id="picker-left-arm-trigger" class="picker-trigger" type="button" aria-expanded="false">
+                      <span id="picker-left-arm-label" class="picker-trigger-label">Left arm</span>
+                      <span id="picker-left-arm-current" class="picker-trigger-current"></span>
+                      <span class="picker-trigger-chevron" aria-hidden="true">
+                        <i class="fa-regular fa-circle-down"></i>
+                      </span>
+                    </button>
+                    <div id="picker-left-arm-menu" class="picker-menu" hidden></div>
+                  </div>
+
+                  <div class="picker" data-picker="right-arm">
+                    <button id="picker-right-arm-trigger" class="picker-trigger" type="button" aria-expanded="false">
+                      <span id="picker-right-arm-label" class="picker-trigger-label">Right arm</span>
+                      <span id="picker-right-arm-current" class="picker-trigger-current"></span>
+                      <span class="picker-trigger-chevron" aria-hidden="true">
+                        <i class="fa-regular fa-circle-down"></i>
+                      </span>
+                    </button>
+                    <div id="picker-right-arm-menu" class="picker-menu" hidden></div>
+                  </div>
+
+                  <div class="picker" data-picker="eyes">
+                    <button id="picker-eyes-trigger" class="picker-trigger" type="button" aria-expanded="false">
+                      <span id="picker-eyes-label" class="picker-trigger-label">Eyes</span>
+                      <span id="picker-eyes-current" class="picker-trigger-current"></span>
+                      <span class="picker-trigger-chevron" aria-hidden="true">
+                        <i class="fa-regular fa-circle-down"></i>
+                      </span>
+                    </button>
+                    <div id="picker-eyes-menu" class="picker-menu" hidden></div>
+                  </div>
+
+                  <div class="picker" data-picker="head">
+                    <button id="picker-head-trigger" class="picker-trigger" type="button" aria-expanded="false">
+                      <span id="picker-head-label" class="picker-trigger-label">Head</span>
+                      <span id="picker-head-current" class="picker-trigger-current"></span>
+                      <span class="picker-trigger-chevron" aria-hidden="true">
+                        <i class="fa-regular fa-circle-down"></i>
+                      </span>
+                    </button>
+                    <div id="picker-head-menu" class="picker-menu" hidden></div>
+                  </div>
+                </div>
+
+                <div class="native-controls" aria-hidden="true">
+                  <select id="skin"></select>
+                  <select id="left-arm"></select>
+                  <select id="right-arm"></select>
+                  <select id="eyes"></select>
+                  <select id="head"></select>
+                </div>
+
+                <label class="checkbox-row">
+                  <input id="shadow" type="checkbox" checked />
+                  <span id="shadow-label">Show shadow</span>
+                </label>
+              </div>
+
+              <div class="actions">
+                <button id="preset-1" type="button" aria-label="Preset Example 1" title="Preset Example 1">
+                  <span id="preset-1-emoji" class="preset-emoji" aria-hidden="true"></span>
+                </button>
+                <button id="preset-2" type="button" aria-label="Preset Example 2" title="Preset Example 2">
+                  <span id="preset-2-emoji" class="preset-emoji" aria-hidden="true"></span>
+                </button>
+                <button id="preset-3" type="button" aria-label="Preset Example 3" title="Preset Example 3">
+                  <span id="preset-3-emoji" class="preset-emoji" aria-hidden="true"></span>
+                </button>
+                <div class="save-dropdown">
+                  <button id="save-menu-trigger" type="button" aria-expanded="false">
+                    <i class="fa-regular fa-floppy-disk icon-inline" aria-hidden="true"></i>
+                    <span id="save-menu-trigger-label">Save</span>
+                    <i class="fa-regular fa-circle-down icon-inline" aria-hidden="true"></i>
+                  </button>
+                  <div id="save-menu" class="save-menu" hidden>
+                    <button id="save-action-svg" type="button">
+                      <i class="fa-regular fa-file-lines icon-inline" aria-hidden="true"></i>
+                      <span id="save-action-svg-label">Export as SVG</span>
+                    </button>
+                    <button id="save-action-png" type="button">
+                      <i class="fa-regular fa-image icon-inline" aria-hidden="true"></i>
+                      <span id="save-action-png-label">Export as PNG</span>
+                    </button>
+                    <button id="save-action-library" type="button">
+                      <i class="fa-regular fa-folder-open icon-inline" aria-hidden="true"></i>
+                      <span id="save-action-library-label">Save to My Library</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <pre id="state" class="state" aria-live="polite"></pre>
+            </section>
+
+            <section class="preview-wrap">
+              <div id="preview" class="preview" aria-label="Robot preview"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="view-my-chaps" class="view">
+          <header class="mychaps-header">
+            <h2 id="mychaps-title">My library</h2>
+            <p id="mychaps-subtitle">Your saved Chap-e for your account.</p>
+          </header>
+          <div id="mychaps-list" class="mychaps-list"></div>
+        </section>
+
+        <section id="view-guide" class="view">
+          <header class="guide-header">
+            <h2 id="guide-title">Usage guide</h2>
+            <p id="guide-subtitle">Do and don't rules for using Chaps-e.</p>
+          </header>
+          <div class="guide-nav" aria-label="Guide navigation">
+            <button id="guide-prev-btn" class="guide-nav-btn" type="button">
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+              <span id="guide-prev-label">Previous</span>
+            </button>
+            <div id="guide-tabs" class="guide-tabs" role="tablist" aria-label="Guide rules"></div>
+            <button id="guide-next-btn" class="guide-nav-btn" type="button">
+              <span id="guide-next-label">Next</span>
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div id="guide-cases" class="guide-cases"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
