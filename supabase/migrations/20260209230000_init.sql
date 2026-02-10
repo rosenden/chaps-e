@@ -54,6 +54,40 @@ returns trigger
 language plpgsql
 as $$
 begin
+  -- Security hardening:
+  -- Prevent privilege escalation by locking sensitive profile fields (email/role/user_id)
+  -- for requests coming from a logged-in end-user (auth.uid() is set). Service-role
+  -- operations (Edge Functions) keep full control.
+  if auth.uid() is not null then
+    if TG_OP = 'INSERT' then
+      -- Enforce ownership and email from the JWT (prevents spoofing).
+      new.user_id := auth.uid();
+      new.email := lower(
+        coalesce(
+          (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'email'),
+          new.email,
+          ''
+        )
+      );
+
+      -- Regular users can't self-assign admin. Admin role is granted via service role
+      -- inserts/updates or the official admin email below.
+      if new.email = 'mparrino@chapsvision.com' then
+        new.role := 'admin';
+        new.nom := 'Parrino';
+        new.prenom := 'Mathieu';
+      else
+        new.role := 'user';
+      end if;
+    else
+      -- UPDATE: end-users may edit nom/prenom only.
+      new.user_id := old.user_id;
+      new.email := old.email;
+      new.role := old.role;
+    end if;
+  end if;
+
+  -- Always enforce the official admin profile defaults.
   if lower(coalesce(new.email, '')) = 'mparrino@chapsvision.com' then
     new.role := 'admin';
     new.nom := 'Parrino';
