@@ -448,6 +448,8 @@ const assets = {
   rightArm: { light: {}, dark: {} },
 };
 
+const assetLoadErrors = [];
+
 const ui = {
   loginModal: byId("login-modal"),
   loginForm: byId("login-form"),
@@ -1487,31 +1489,31 @@ async function loadAllAssets() {
 }
 
 async function loadSkinAssets(skin) {
-  assets.torsoUpper[skin] = await fetchSvg(pathForTorso(skin, "torso_upper"));
-  assets.torsoLower[skin] = await fetchSvg(pathForTorso(skin, "torso_lower"));
+  assets.torsoUpper[skin] = await safeFetchSvg(pathForTorso(skin, "torso_upper"));
+  assets.torsoLower[skin] = await safeFetchSvg(pathForTorso(skin, "torso_lower"));
 
   await Promise.all(
     HEAD_INCLINATIONS.map(async (inclination) => {
-      assets.head[skin][inclination] = await fetchSvg(pathForHead(skin, inclination));
+      assets.head[skin][inclination] = await safeFetchSvg(pathForHead(skin, inclination));
     }),
   );
 
   await Promise.all(
     LEFT_ARM_VARIANTS.map(async (variant) => {
-      assets.leftArm[skin][variant] = await fetchSvg(pathForLeftArm(skin, variant));
+      assets.leftArm[skin][variant] = await safeFetchSvg(pathForLeftArm(skin, variant));
     }),
   );
 
   await Promise.all(
     RIGHT_ARM_VARIANTS.map(async (variant) => {
-      assets.rightArm[skin][variant] = await fetchSvg(pathForRightArm(skin, variant));
+      assets.rightArm[skin][variant] = await safeFetchSvg(pathForRightArm(skin, variant));
     }),
   );
 
   await Promise.all(
     EYE_EXPRESSIONS.map(async (expression) => {
       if (skin === "light") {
-        assets.eyes.light[expression] = await fetchSvg(pathForEyes("light", expression));
+        assets.eyes.light[expression] = await safeFetchSvg(pathForEyes("light", expression));
         return;
       }
 
@@ -1546,6 +1548,17 @@ function pathForRightArm(skin, variant) {
 
 function pathForEyes(skin, expression) {
   return `assets/eyes/expression=${expression}.svg`;
+}
+
+async function safeFetchSvg(path) {
+  try {
+    return await fetchSvg(path);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    assetLoadErrors.push({ path, message });
+    console.warn("Asset load failed", path, message);
+    return null;
+  }
 }
 
 async function fetchSvg(path) {
