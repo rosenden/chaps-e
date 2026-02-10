@@ -227,6 +227,7 @@ const I18N = {
     loading_error: "Error",
     assets_incomplete: "Incomplete assets.",
     export_png_failed: "PNG export failed.",
+    export_jpg_failed: "JPG export failed.",
     library_missing_config:
       "Supabase is not configured. Fill config.js to enable login and your cloud library.",
     library_not_connected: "Sign in to view and save your library.",
@@ -371,6 +372,7 @@ const I18N = {
     loading_error: "Erreur",
     assets_incomplete: "Assets incomplets.",
     export_png_failed: "Export PNG impossible.",
+    export_jpg_failed: "Export JPG impossible.",
     library_missing_config:
       "Supabase n'est pas configure. Renseigne config.js pour activer la connexion et ta bibliotheque cloud.",
     library_not_connected: "Connecte-toi pour voir et sauvegarder ta bibliotheque.",
@@ -606,6 +608,10 @@ function byId(id) {
 
 function normalizeLanguage(raw) {
   return raw === "fr" ? "fr" : "en";
+}
+
+function getUiLocale() {
+  return currentLanguage === "fr" ? "fr-FR" : "en-US";
 }
 
 function t(key, variables = {}) {
@@ -1392,7 +1398,7 @@ function buildRobotSvg(config) {
   const eyes = resolveAsset(assets.eyes, skin, config.eyes);
 
   if (!torsoLower || !torsoUpper || !leftArm || !rightArm || !head) {
-    return '<div class="loading">Assets incomplets.</div>';
+    return `<div class="loading">${escapeHtml(t("assets_incomplete"))}</div>`;
   }
 
   const layers = [];
@@ -1959,13 +1965,13 @@ function hideLoginModal() {
 function openSaveModal() {
   if (!supabaseReady || !supabase) {
     showLoginModal();
-    ui.loginError.textContent = "Supabase non configure. Impossible de sauvegarder dans la bibliotheque.";
+    ui.loginError.textContent = t("save_error_missing_config");
     return;
   }
 
   if (!currentUser) {
     showLoginModal();
-    ui.loginError.textContent = "Connecte-toi pour sauvegarder.";
+    ui.loginError.textContent = t("save_error_connect");
     return;
   }
 
@@ -2070,7 +2076,7 @@ async function exportCurrentAsPng() {
     await exportPngFromSvgMarkup(currentSvgMarkup, fileName);
   } catch (error) {
     console.error(error);
-    alert("Export PNG impossible.");
+    alert(t("export_png_failed"));
   }
 }
 
@@ -2083,7 +2089,7 @@ async function exportCurrentAsJpg() {
     await exportJpgFromSvgMarkup(currentSvgMarkup, fileName);
   } catch (error) {
     console.error(error);
-    alert("Export JPG impossible.");
+    alert(t("export_jpg_failed"));
   }
 }
 
@@ -2091,20 +2097,20 @@ async function onSaveModalSubmit(event) {
   event.preventDefault();
 
   if (!supabaseReady || !supabase) {
-    ui.saveModalError.textContent = "Supabase non configure.";
+    ui.saveModalError.textContent = t("save_error_supabase");
     return;
   }
 
   if (!currentUser || !currentUser.id) {
     hideSaveModal();
     showLoginModal();
-    ui.loginError.textContent = "Connecte-toi pour sauvegarder.";
+    ui.loginError.textContent = t("save_error_connect");
     return;
   }
 
   const rawName = ui.saveModalName.value.trim();
   if (!rawName) {
-    ui.saveModalError.textContent = "Le nom est obligatoire.";
+    ui.saveModalError.textContent = t("save_name_required");
     return;
   }
 
@@ -2115,7 +2121,7 @@ async function onSaveModalSubmit(event) {
   });
 
   if (error) {
-    ui.saveModalError.textContent = `Sauvegarde impossible: ${error.message}`;
+    ui.saveModalError.textContent = t("save_error_failed", { message: error.message });
     return;
   }
 
@@ -2257,8 +2263,7 @@ async function renderMyChaps() {
   if (!supabaseReady || !supabase) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent =
-      "Supabase n'est pas configure. Renseigne config.js pour activer login/signup et ta bibliotheque cloud.";
+    empty.textContent = t("library_missing_config");
     ui.myChapsList.appendChild(empty);
     return;
   }
@@ -2266,7 +2271,7 @@ async function renderMyChaps() {
   if (!currentUser || !currentUser.id) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "Connecte-toi pour voir et sauvegarder ta bibliotheque.";
+    empty.textContent = t("library_not_connected");
     ui.myChapsList.appendChild(empty);
     return;
   }
@@ -2279,7 +2284,7 @@ async function renderMyChaps() {
   if (error) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = `Erreur de chargement: ${error.message}`;
+    empty.textContent = t("library_load_error", { message: error.message });
     ui.myChapsList.appendChild(empty);
     return;
   }
@@ -2294,7 +2299,7 @@ async function renderMyChaps() {
   if (!saved.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "Aucun Chap-e dans ta bibliotheque pour le moment.";
+    empty.textContent = t("library_empty");
     ui.myChapsList.appendChild(empty);
     return;
   }
@@ -2315,12 +2320,18 @@ async function renderMyChaps() {
 
     const dateText = document.createElement("p");
     const date = new Date(entry.createdAt);
-    dateText.textContent = Number.isNaN(date.getTime())
-      ? "Date inconnue"
-      : `Cree le ${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`;
+    if (Number.isNaN(date.getTime())) {
+      dateText.textContent = t("library_date_unknown");
+    } else {
+      const formatted = date.toLocaleString(getUiLocale(), {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      dateText.textContent = t("library_created_on", { date: formatted });
+    }
 
     meta.append(title, dateText);
 
@@ -2330,7 +2341,7 @@ async function renderMyChaps() {
     const useBtn = document.createElement("button");
     useBtn.type = "button";
     useBtn.innerHTML =
-      '<i class="fa-regular fa-circle-check icon-inline" aria-hidden="true"></i><span>Utiliser</span>';
+      `<i class="fa-regular fa-circle-check icon-inline" aria-hidden="true"></i><span>${escapeHtml(t("library_use"))}</span>`;
     useBtn.addEventListener("click", () => {
       applyConfig(entry.config);
       showView("generator");
@@ -2354,7 +2365,7 @@ async function renderMyChaps() {
         await exportPngFromSvgMarkup(svgMarkup, `chaps-e-${toSlug(entry.name)}.png`);
       } catch (error) {
         console.error(error);
-        alert("Export PNG impossible.");
+        alert(t("export_png_failed"));
       }
     });
 
@@ -2367,18 +2378,18 @@ async function renderMyChaps() {
         await exportJpgFromSvgMarkup(svgMarkup, `chaps-e-${toSlug(entry.name)}.jpg`);
       } catch (error) {
         console.error(error);
-        alert("Export JPG impossible.");
+        alert(t("export_jpg_failed"));
       }
     });
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.innerHTML =
-      '<i class="fa-regular fa-trash-can icon-inline" aria-hidden="true"></i><span>Supprimer</span>';
+      `<i class="fa-regular fa-trash-can icon-inline" aria-hidden="true"></i><span>${escapeHtml(t("library_delete"))}</span>`;
     deleteBtn.addEventListener("click", async () => {
       const { error: deleteError } = await supabase.from(DB_TABLE_CHAPES).delete().eq("id", entry.id);
       if (deleteError) {
-        alert(`Suppression impossible: ${deleteError.message}`);
+        alert(t("library_delete_error", { message: deleteError.message }));
         return;
       }
       await renderMyChaps();
@@ -2406,7 +2417,13 @@ function sanitizeConfig(rawConfig) {
 }
 
 function buildDefaultChapEName() {
-  return `Chap-e ${new Date().toLocaleString("fr-FR")}`;
+  return `${t("save_default_name_prefix")} ${new Date().toLocaleString(getUiLocale(), {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
 }
 
 function updatePresetEmojiLabels() {
@@ -2439,10 +2456,10 @@ function emotionEmojiForEyes(eyes) {
 
 function toLabel(value) {
   if (value === "light") {
-    return "Light";
+    return t("label_light");
   }
   if (value === "dark") {
-    return "Dark";
+    return t("label_dark");
   }
   return value
     .replaceAll("_", " ")
