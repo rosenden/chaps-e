@@ -175,6 +175,8 @@ const I18N = {
     create_user_error_supabase: "Supabase not configured.",
     create_user_error_connect: "Sign in first.",
     create_user_error_email_exists: "This email already exists.",
+    create_user_error_edge_unreachable:
+      "Unable to reach the Edge Function. Deploy `admin-create-user` on Supabase (Edge Functions) and check CORS.",
     create_user_error_failed: "Create user failed: {message}",
     stats_btn: "Admin stats",
     stats_title: "Admin stats",
@@ -186,6 +188,8 @@ const I18N = {
     stats_error_supabase: "Supabase not configured.",
     stats_error_connect: "Sign in first.",
     stats_error_not_admin: "Only admin can access stats.",
+    stats_error_edge_unreachable:
+      "Unable to reach the Edge Function. Deploy `admin-stats` on Supabase (Edge Functions) and check CORS.",
     stats_error_failed: "Unable to load stats: {message}",
     logout_btn: "Sign out",
     panel_title: "Configuration",
@@ -315,6 +319,8 @@ const I18N = {
     create_user_error_supabase: "Supabase non configure.",
     create_user_error_connect: "Connecte-toi d'abord.",
     create_user_error_email_exists: "Cet email existe deja.",
+    create_user_error_edge_unreachable:
+      "Impossible de joindre l'Edge Function. Deploie `admin-create-user` sur Supabase (Edge Functions) et verifie le CORS.",
     create_user_error_failed: "Creation utilisateur impossible: {message}",
     stats_btn: "Stats admin",
     stats_title: "Stats admin",
@@ -326,6 +332,8 @@ const I18N = {
     stats_error_supabase: "Supabase non configure.",
     stats_error_connect: "Connecte-toi d'abord.",
     stats_error_not_admin: "Seul un admin peut acceder aux stats.",
+    stats_error_edge_unreachable:
+      "Impossible de joindre l'Edge Function. Deploie `admin-stats` sur Supabase (Edge Functions) et verifie le CORS.",
     stats_error_failed: "Impossible de charger les stats: {message}",
     logout_btn: "Se deconnecter",
     panel_title: "Configuration",
@@ -1740,6 +1748,10 @@ async function renderStats() {
     const message = String(error.message || "");
     const lower = message.toLowerCase();
     ui.statsError.classList.add("is-error");
+    if (lower.includes("failed to send a request") || lower.includes("failed to fetch")) {
+      ui.statsError.textContent = t("stats_error_edge_unreachable");
+      return;
+    }
     if (lower.includes("forbidden")) {
       ui.statsError.textContent = t("stats_error_not_admin");
       return;
@@ -1883,6 +1895,10 @@ async function onCreateUserSubmit(event) {
   if (error) {
     const message = String(error.message || "");
     const details = message.toLowerCase();
+    if (details.includes("failed to send a request") || details.includes("failed to fetch")) {
+      ui.createUserError.textContent = t("create_user_error_edge_unreachable");
+      return;
+    }
     if (details.includes("email_already_exists") || details.includes("duplicate")) {
       ui.createUserError.textContent = t("create_user_error_email_exists");
       return;
