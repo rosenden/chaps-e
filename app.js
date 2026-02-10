@@ -1833,6 +1833,9 @@ function isPasswordFormValid() {
   if (!newPassword || !confirmPassword) {
     return false;
   }
+  if (newPassword.length < 6) {
+    return false;
+  }
   return newPassword === confirmPassword;
 }
 
