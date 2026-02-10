@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SCENE = { width: 88, height: 101 };
 const DB_TABLE_CHAPES = "chapse";
 const DB_TABLE_USERS = "users";
+const DB_TABLE_EXPORT_EVENTS = "export_events";
 const USER_ROLES = ["admin", "user"];
 const STORAGE_UI_LANG = "chapse_ui_lang";
 const ADMIN_EMAIL = "mparrino@chapsvision.com";
@@ -175,6 +176,17 @@ const I18N = {
     create_user_error_connect: "Sign in first.",
     create_user_error_email_exists: "This email already exists.",
     create_user_error_failed: "Create user failed: {message}",
+    stats_btn: "Admin stats",
+    stats_title: "Admin stats",
+    stats_subtitle: "Stats across all users.",
+    stats_total_saved: "Saved in library",
+    stats_exports_png: "PNG exports",
+    stats_exports_jpg: "JPG exports",
+    stats_loading: "Loading stats...",
+    stats_error_supabase: "Supabase not configured.",
+    stats_error_connect: "Sign in first.",
+    stats_error_not_admin: "Only admin can access stats.",
+    stats_error_failed: "Unable to load stats: {message}",
     logout_btn: "Sign out",
     panel_title: "Configuration",
     picker_left_arm: "Left arm",
@@ -188,6 +200,7 @@ const I18N = {
     save_trigger: "Save",
     save_as_svg: "Export as SVG",
     save_as_png: "Export as PNG",
+    save_as_jpg: "Export as JPG",
     save_to_library: "Save to My Library",
     mychaps_title: "My library",
     mychaps_subtitle: "Your saved Chap-e for your account.",
@@ -303,6 +316,17 @@ const I18N = {
     create_user_error_connect: "Connecte-toi d'abord.",
     create_user_error_email_exists: "Cet email existe deja.",
     create_user_error_failed: "Creation utilisateur impossible: {message}",
+    stats_btn: "Stats admin",
+    stats_title: "Stats admin",
+    stats_subtitle: "Stats sur l'ensemble des utilisateurs.",
+    stats_total_saved: "Sauvegardes en bibliotheque",
+    stats_exports_png: "Exports PNG",
+    stats_exports_jpg: "Exports JPG",
+    stats_loading: "Chargement des stats...",
+    stats_error_supabase: "Supabase non configure.",
+    stats_error_connect: "Connecte-toi d'abord.",
+    stats_error_not_admin: "Seul un admin peut acceder aux stats.",
+    stats_error_failed: "Impossible de charger les stats: {message}",
     logout_btn: "Se deconnecter",
     panel_title: "Configuration",
     picker_left_arm: "Bras gauche",
@@ -316,6 +340,7 @@ const I18N = {
     save_trigger: "Sauvegarder",
     save_as_svg: "Enregistrer en SVG",
     save_as_png: "Enregistrer en PNG",
+    save_as_jpg: "Enregistrer en JPG",
     save_to_library: "Sauvegarder dans Ma bibliotheque",
     mychaps_title: "Ma bibliotheque",
     mychaps_subtitle: "Tes Chap-e sauvegardes pour ton compte.",
@@ -450,6 +475,7 @@ const ui = {
   viewGenerator: byId("view-generator"),
   viewGuide: byId("view-guide"),
   viewMyChaps: byId("view-my-chaps"),
+  viewStats: byId("view-stats"),
   brandHome: byId("brand-home"),
 
   accountName: byId("account-name"),
@@ -460,6 +486,7 @@ const ui = {
   langToggleBtn: byId("lang-toggle-btn"),
   passwordBtn: byId("password-btn"),
   createUserBtn: byId("create-user-btn"),
+  statsBtn: byId("stats-btn"),
   logoutBtn: byId("logout-btn"),
 
   skin: byId("skin"),
@@ -497,6 +524,7 @@ const ui = {
   saveMenu: byId("save-menu"),
   saveActionSvg: byId("save-action-svg"),
   saveActionPng: byId("save-action-png"),
+  saveActionJpg: byId("save-action-jpg"),
   saveActionLibrary: byId("save-action-library"),
   preview: byId("preview"),
   state: byId("state"),
@@ -506,6 +534,11 @@ const ui = {
   guideTabs: byId("guide-tabs"),
   guideCases: byId("guide-cases"),
   myChapsList: byId("mychaps-list"),
+
+  statsError: byId("stats-error"),
+  statTotalSaved: byId("stat-total-saved"),
+  statExportsPng: byId("stat-exports-png"),
+  statExportsJpg: byId("stat-exports-jpg"),
 };
 
 const pickerDefs = [];
@@ -641,6 +674,7 @@ function applyStaticTranslations() {
   setText("lang-toggle-label", t("language_toggle"));
   setText("password-btn-label", t("password_btn"));
   setText("create-user-btn-label", t("create_user_btn"));
+  setText("stats-btn-label", t("stats_btn"));
   setText("logout-btn-label", t("logout_btn"));
   setText("create-user-title", t("create_user_modal_title"));
   setText("create-user-subtitle", t("create_user_modal_subtitle"));
@@ -672,11 +706,17 @@ function applyStaticTranslations() {
   setText("save-menu-trigger-label", t("save_trigger"));
   setText("save-action-svg-label", t("save_as_svg"));
   setText("save-action-png-label", t("save_as_png"));
+  setText("save-action-jpg-label", t("save_as_jpg"));
   setText("save-action-library-label", t("save_to_library"));
   setText("guide-title", t("guide_title"));
   setText("guide-subtitle", t("guide_subtitle"));
   setText("guide-prev-label", t("guide_prev"));
   setText("guide-next-label", t("guide_next"));
+  setText("stats-title", t("stats_title"));
+  setText("stats-subtitle", t("stats_subtitle"));
+  setText("stats-total-saved-label", t("stats_total_saved"));
+  setText("stats-exports-png-label", t("stats_exports_png"));
+  setText("stats-exports-jpg-label", t("stats_exports_jpg"));
   setText("mychaps-title", t("mychaps_title"));
   setText("mychaps-subtitle", t("mychaps_subtitle"));
   ui.preview.setAttribute("aria-label", t("preview_label"));
@@ -877,6 +917,7 @@ function bindEvents() {
   ui.logoutBtn.addEventListener("click", onLogoutClick);
   ui.passwordBtn.addEventListener("click", onPasswordResetClick);
   ui.createUserBtn.addEventListener("click", onCreateUserClick);
+  ui.statsBtn.addEventListener("click", onStatsClick);
   ui.langToggleBtn.addEventListener("click", onLanguageToggleClick);
   ui.profileMenuTrigger.addEventListener("click", (event) => {
     event.preventDefault();
@@ -957,6 +998,10 @@ function bindEvents() {
   ui.saveActionPng.addEventListener("click", async () => {
     closeSaveMenu();
     await exportCurrentAsPng();
+  });
+  ui.saveActionJpg.addEventListener("click", async () => {
+    closeSaveMenu();
+    await exportCurrentAsJpg();
   });
   ui.saveActionLibrary.addEventListener("click", () => {
     closeSaveMenu();
@@ -1656,6 +1701,63 @@ async function onCreateUserClick() {
   showCreateUserModal();
 }
 
+async function onStatsClick() {
+  closeProfileMenu();
+  closeSaveMenu();
+  closeAllPickerMenus();
+  showView("stats");
+  await renderStats();
+}
+
+async function renderStats() {
+  ui.statsError.classList.remove("is-error");
+  ui.statsError.textContent = "";
+  ui.statTotalSaved.textContent = "—";
+  ui.statExportsPng.textContent = "—";
+  ui.statExportsJpg.textContent = "—";
+
+  if (!supabaseReady || !supabase) {
+    ui.statsError.classList.add("is-error");
+    ui.statsError.textContent = t("stats_error_supabase");
+    return;
+  }
+  if (!currentUser?.id) {
+    ui.statsError.classList.add("is-error");
+    ui.statsError.textContent = t("stats_error_connect");
+    showLoginModal();
+    return;
+  }
+  if (!isCurrentUserAdmin()) {
+    ui.statsError.classList.add("is-error");
+    ui.statsError.textContent = t("stats_error_not_admin");
+    return;
+  }
+
+  ui.statsError.textContent = t("stats_loading");
+
+  const { data, error } = await supabase.functions.invoke("admin-stats", { body: {} });
+  if (error) {
+    const message = String(error.message || "");
+    const lower = message.toLowerCase();
+    ui.statsError.classList.add("is-error");
+    if (lower.includes("forbidden")) {
+      ui.statsError.textContent = t("stats_error_not_admin");
+      return;
+    }
+    ui.statsError.textContent = t("stats_error_failed", { message: message || "Unknown error" });
+    return;
+  }
+
+  const totalSaved = Number(data?.total_saved ?? 0);
+  const exportsPng = Number(data?.exports_png ?? 0);
+  const exportsJpg = Number(data?.exports_jpg ?? 0);
+
+  ui.statsError.textContent = "";
+  ui.statTotalSaved.textContent = Number.isFinite(totalSaved) ? String(totalSaved) : "0";
+  ui.statExportsPng.textContent = Number.isFinite(exportsPng) ? String(exportsPng) : "0";
+  ui.statExportsJpg.textContent = Number.isFinite(exportsJpg) ? String(exportsJpg) : "0";
+}
+
 async function onPasswordModalSubmit(event) {
   event.preventDefault();
   ui.passwordModalError.textContent = "";
@@ -1808,6 +1910,7 @@ function updateAccountUi() {
     ui.accountRole.textContent = t("role_label", { role: t("role_user") });
     ui.profileAvatar.textContent = "CV";
     ui.createUserBtn.hidden = true;
+    ui.statsBtn.hidden = true;
     return;
   }
 
@@ -1822,6 +1925,7 @@ function updateAccountUi() {
   ui.accountRole.textContent = t("role_label", { role: t(`role_${role}`) });
   ui.profileAvatar.textContent = buildInitials(displayName || fallbackEmail);
   ui.createUserBtn.hidden = !isAdmin;
+  ui.statsBtn.hidden = !isAdmin;
 }
 
 function showLoginModal() {
@@ -1921,10 +2025,12 @@ function showView(view) {
   const isGenerator = view === "generator";
   const isGuide = view === "guide";
   const isMyChaps = view === "my-chaps";
+  const isStats = view === "stats";
 
   ui.viewGenerator.classList.toggle("is-active", isGenerator);
   ui.viewGuide.classList.toggle("is-active", isGuide);
   ui.viewMyChaps.classList.toggle("is-active", isMyChaps);
+  ui.viewStats.classList.toggle("is-active", isStats);
 
   ui.navGenerator.classList.toggle("is-active", isGenerator);
   ui.navGuide.classList.toggle("is-active", isGuide);
@@ -1949,6 +2055,19 @@ async function exportCurrentAsPng() {
   } catch (error) {
     console.error(error);
     alert("Export PNG impossible.");
+  }
+}
+
+async function exportCurrentAsJpg() {
+  if (!currentSvgMarkup) {
+    return;
+  }
+  const fileName = `chaps-e-${buildFileStem(currentConfig)}.jpg`;
+  try {
+    await exportJpgFromSvgMarkup(currentSvgMarkup, fileName);
+  } catch (error) {
+    console.error(error);
+    alert("Export JPG impossible.");
   }
 }
 
@@ -2223,6 +2342,19 @@ async function renderMyChaps() {
       }
     });
 
+    const jpgBtn = document.createElement("button");
+    jpgBtn.type = "button";
+    jpgBtn.innerHTML = '<i class="fa-regular fa-image icon-inline" aria-hidden="true"></i><span>JPG</span>';
+    jpgBtn.addEventListener("click", async () => {
+      try {
+        const svgMarkup = buildRobotSvg(entry.config);
+        await exportJpgFromSvgMarkup(svgMarkup, `chaps-e-${toSlug(entry.name)}.jpg`);
+      } catch (error) {
+        console.error(error);
+        alert("Export JPG impossible.");
+      }
+    });
+
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.innerHTML =
@@ -2236,7 +2368,7 @@ async function renderMyChaps() {
       await renderMyChaps();
     });
 
-    actions.append(useBtn, svgBtn, pngBtn, deleteBtn);
+    actions.append(useBtn, svgBtn, pngBtn, jpgBtn, deleteBtn);
 
     card.append(preview, meta, actions);
     ui.myChapsList.appendChild(card);
@@ -2374,6 +2506,26 @@ function downloadSvgMarkup(svgMarkup, fileName) {
   downloadBlob(blob, fileName);
 }
 
+async function trackExportEvent(format) {
+  if (!supabaseReady || !supabase) {
+    return;
+  }
+  if (!currentUser?.id) {
+    return;
+  }
+
+  const normalized = format === "jpg" ? "jpg" : "png";
+
+  const { error } = await supabase.from(DB_TABLE_EXPORT_EVENTS).insert({
+    user_id: currentUser.id,
+    format: normalized,
+  });
+
+  if (error) {
+    console.warn("trackExportEvent failed", error);
+  }
+}
+
 async function exportPngFromSvgMarkup(svgMarkup, fileName) {
   const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
   const svgUrl = URL.createObjectURL(svgBlob);
@@ -2397,6 +2549,40 @@ async function exportPngFromSvgMarkup(svgMarkup, fileName) {
 
     const pngBlob = await canvasToBlob(canvas, "image/png");
     downloadBlob(pngBlob, fileName);
+    void trackExportEvent("png");
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
+
+async function exportJpgFromSvgMarkup(svgMarkup, fileName) {
+  const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await loadImage(svgUrl);
+    const scale = 8;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = SCENE.width * scale;
+    canvas.height = SCENE.height * scale;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Contexte canvas indisponible");
+    }
+
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+    // JPEG doesn't support transparency, so we export on a white background.
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, SCENE.width, SCENE.height);
+
+    ctx.drawImage(image, 0, 0, SCENE.width, SCENE.height);
+
+    const jpgBlob = await canvasToBlob(canvas, "image/jpeg", 0.92);
+    downloadBlob(jpgBlob, fileName);
+    void trackExportEvent("jpg");
   } finally {
     URL.revokeObjectURL(svgUrl);
   }
@@ -2411,15 +2597,15 @@ function loadImage(src) {
   });
 }
 
-function canvasToBlob(canvas, mimeType) {
+function canvasToBlob(canvas, mimeType, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) {
-        reject(new Error("Echec de creation du PNG"));
+        reject(new Error("Echec de creation de l'image"));
         return;
       }
       resolve(blob);
-    }, mimeType);
+    }, mimeType, quality);
   });
 }
 
@@ -2453,6 +2639,7 @@ function setGeneratorInteractive(enabled) {
     ui.saveMenuTrigger,
     ui.saveActionSvg,
     ui.saveActionPng,
+    ui.saveActionJpg,
     ui.saveActionLibrary,
     ui.saveModalName,
     ui.saveCancel,

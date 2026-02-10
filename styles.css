@@ -291,6 +291,10 @@ body {
   padding: 1.1rem;
 }
 
+#view-stats {
+  padding: 1.1rem;
+}
+
 .generator-layout {
   display: grid;
   grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
@@ -954,6 +958,58 @@ button {
 .mychaps-header p {
   margin: 0.35rem 0 0.9rem;
   color: var(--cv-sage-700);
+}
+
+.stats-header h2 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.stats-header p {
+  margin: 0.35rem 0 0;
+  color: var(--cv-sage-700);
+}
+
+.stats-error {
+  margin: 0.55rem 0 0;
+  min-height: 1.1rem;
+  font-size: 0.9rem;
+  color: var(--cv-sage-700);
+}
+
+.stats-error.is-error {
+  color: #a92f43;
+}
+
+.stats-grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.45);
+  padding: 0.9rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.stat-label {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--cv-sage-700);
+}
+
+.stat-value {
+  margin: 0.2rem 0 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cv-sage-900);
 }
 
 .mychaps-list {

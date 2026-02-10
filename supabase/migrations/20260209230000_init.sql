@@ -18,8 +18,21 @@ create table if not exists public.chapse (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.export_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  format text not null check (format in ('png', 'jpg')),
+  created_at timestamptz not null default now()
+);
+
 create index if not exists chapse_user_created_at_idx
   on public.chapse (user_id, created_at desc);
+
+create index if not exists export_events_user_created_at_idx
+  on public.export_events (user_id, created_at desc);
+
+create index if not exists export_events_format_created_at_idx
+  on public.export_events (format, created_at desc);
 
 create or replace function public.tg_set_updated_at()
 returns trigger
@@ -57,6 +70,7 @@ for each row execute procedure public.tg_set_admin_role_by_email();
 
 alter table public.users enable row level security;
 alter table public.chapse enable row level security;
+alter table public.export_events enable row level security;
 
 drop policy if exists users_select_own on public.users;
 create policy users_select_own
@@ -105,5 +119,23 @@ with check (auth.uid() = user_id);
 drop policy if exists chapse_delete_own on public.chapse;
 create policy chapse_delete_own
 on public.chapse
+for delete
+using (auth.uid() = user_id);
+
+drop policy if exists export_events_select_own on public.export_events;
+create policy export_events_select_own
+on public.export_events
+for select
+using (auth.uid() = user_id);
+
+drop policy if exists export_events_insert_own on public.export_events;
+create policy export_events_insert_own
+on public.export_events
+for insert
+with check (auth.uid() = user_id);
+
+drop policy if exists export_events_delete_own on public.export_events;
+create policy export_events_delete_own
+on public.export_events
 for delete
 using (auth.uid() = user_id);

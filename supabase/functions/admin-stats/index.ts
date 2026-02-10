@@ -1,10 +1,10 @@
-// Supabase Edge Function: admin-create-user
-// Creates a new active auth user + inserts its profile row in `public.users`.
+// Supabase Edge Function: admin-stats
+// Returns aggregated stats across all users.
 //
 // Security:
 // - Requires a valid session token (Authorization: Bearer <jwt>)
 // - Caller must have role=admin in `public.users`
-// - Uses SUPABASE_SERVICE_ROLE_KEY (stored as a Supabase secret) for admin APIs
+// - Uses SUPABASE_SERVICE_ROLE_KEY (stored as a Supabase secret) to query counts
 
 /// <reference types="https://deno.land/x/deno@v1.46.3/mod.d.ts" />
 
@@ -45,8 +45,33 @@ function safeJsonParse(raw: string) {
   }
 }
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+function parseContentRangeCount(value: string | null) {
+  if (!value) {
+    return 0;
+  }
+  const match = value.match(/\/(\d+)\s*$/);
+  if (!match) {
+    return 0;
+  }
+  const count = Number(match[1]);
+  return Number.isFinite(count) ? count : 0;
+}
+
+async function fetchCount(supabaseUrl: string, serviceRoleKey: string, path: string) {
+  // Use `Prefer: count=exact` and a tiny limit to get the total via Content-Range.
+  const url = `${supabaseUrl}/rest/v1/${path}${path.includes("?") ? "&" : "?"}select=id&limit=1`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Prefer: "count=exact",
+    },
+  });
+  if (!res.ok) {
+    return { ok: false, count: 0 };
+  }
+  return { ok: true, count: parseContentRangeCount(res.headers.get("content-range")) };
 }
 
 Deno.serve(async (req) => {
@@ -101,69 +126,19 @@ Deno.serve(async (req) => {
     return jsonResponse(403, { error: "forbidden" });
   }
 
-  const body = (await req.json().catch(() => null)) as null | Record<string, unknown>;
-  const email = String(body?.email || "").trim().toLowerCase();
-  const password = String(body?.password || "");
-  const nom = String(body?.nom || "").trim();
-  const prenom = String(body?.prenom || "").trim();
-  const roleRaw = String(body?.role || "user").trim().toLowerCase();
-  const role = roleRaw === "admin" ? "admin" : "user";
+  const [saved, png, jpg] = await Promise.all([
+    fetchCount(supabaseUrl, serviceRoleKey, "chapse"),
+    fetchCount(supabaseUrl, serviceRoleKey, "export_events?format=eq.png"),
+    fetchCount(supabaseUrl, serviceRoleKey, "export_events?format=eq.jpg"),
+  ]);
 
-  if (!email || !password || !nom || !prenom) {
-    return jsonResponse(400, { error: "missing_fields" });
-  }
-  if (!isValidEmail(email)) {
-    return jsonResponse(400, { error: "invalid_email" });
-  }
-  if (password.length < 6) {
-    return jsonResponse(400, { error: "password_too_short" });
+  if (!saved.ok || !png.ok || !jpg.ok) {
+    return jsonResponse(500, { error: "count_failed" });
   }
 
-  // Create auth user (active immediately: email_confirm=true).
-  const createAuthUrl = `${supabaseUrl}/auth/v1/admin/users`;
-  const { res: createRes, data: createdUser } = await fetchJson(createAuthUrl, {
-    method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password, email_confirm: true }),
+  return jsonResponse(200, {
+    total_saved: saved.count,
+    exports_png: png.count,
+    exports_jpg: jpg.count,
   });
-
-  if (!createRes.ok || !createdUser?.id) {
-    const message = String(createdUser?.msg || createdUser?.message || "create_user_failed");
-    return jsonResponse(400, { error: "create_user_failed", message });
-  }
-
-  const newUserId = String(createdUser.id);
-
-  // Insert profile row. If this fails, rollback the auth user.
-  const insertProfileUrl = `${supabaseUrl}/rest/v1/users`;
-  const { res: insertRes, data: insertData } = await fetchJson(insertProfileUrl, {
-    method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({ user_id: newUserId, email, nom, prenom, role }),
-  });
-
-  if (!insertRes.ok) {
-    // Rollback auth user.
-    await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(newUserId)}`, {
-      method: "DELETE",
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    }).catch(() => {});
-
-    const message = String(insertData?.message || insertData?.hint || "insert_profile_failed");
-    return jsonResponse(400, { error: "insert_profile_failed", message });
-  }
-
-  return jsonResponse(200, { user_id: newUserId });
 });
