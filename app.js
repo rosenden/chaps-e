@@ -1,6 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SCENE = { width: 88, height: 101 };
+// Avoid tiny anti-alias clipping on edges when exporting (head rounding touches y=0).
+const EXPORT_PADDING = 1;
+const EXPORT_SCENE = {
+  width: SCENE.width + EXPORT_PADDING * 2,
+  height: SCENE.height + EXPORT_PADDING * 2,
+};
 const DB_TABLE_CHAPES = "chapse";
 const DB_TABLE_USERS = "users";
 const DB_TABLE_EXPORT_EVENTS = "export_events";
@@ -14,6 +20,8 @@ const ADMIN_PROFILE_DEFAULTS = {
 };
 
 const SKINS = ["light", "dark"];
+const MYCHAPS_PAGE_SIZE = 12;
+const LOGIN_SLIDE_AUTOPLAY_MS = 5200;
 const LEFT_ARM_VARIANTS = [
   "rest_open_down_front",
   "hold_grip_down_in",
@@ -69,7 +77,9 @@ const GUIDE_CASES = [
     id: "light-dark",
     titleKey: "guide_case_1_title",
     introTitleKey: "guide_case_1_intro_title",
+    descriptionLines: ["guide_case_1_desc_line_1"],
     introLines: ["guide_case_1_intro_line_1", "guide_case_1_intro_line_2"],
+    observationLines: ["guide_case_1_obs_line_1"],
     items: [
       { skin: "light", surface: "light", isDo: true },
       { skin: "dark", surface: "light", isDo: false },
@@ -81,7 +91,9 @@ const GUIDE_CASES = [
     id: "official-assets",
     titleKey: "guide_case_2_title",
     introTitleKey: "guide_case_2_intro_title",
+    descriptionLines: ["guide_case_2_desc_line_1"],
     introLines: ["guide_case_2_intro_line_1"],
+    observationLines: ["guide_case_2_obs_line_1"],
     items: [
       { type: "robot", skin: "light", surface: "light", isDo: true },
       {
@@ -99,6 +111,8 @@ const GUIDE_CASES = [
 const I18N = {
   en: {
     app_title: "Chaps-e Generator by ChapsVision",
+    app_name: "Chaps-e Generator",
+    app_byline: "by ChapsVision",
     login_title: "Sign in",
     login_subtitle: "Internal ChapsVision account",
     login_email_placeholder: "name@company.com",
@@ -112,7 +126,7 @@ const I18N = {
     login_error_required: "Email and password are required.",
     login_error_failed: "Sign in failed: {message}",
     login_error_invalid_credentials_help:
-      "Invalid login credentials. Create this user in Supabase Auth > Users with email mparrino@chapsvision.com and password admin, then retry.",
+      "This app uses Supabase Auth (Authentication > Users), not the Database table `public.users`. This error usually means the password is wrong for this email, or the user was created without a password (invite/magic link). Set/reset the password in Supabase Auth (min 6 chars), then retry.",
     login_error_signed_out: "Sign out failed: {message}",
     save_title: "Name your Chap-e",
     save_subtitle: "This name will be used in your library.",
@@ -128,12 +142,14 @@ const I18N = {
     nav_generator: "Generator",
     nav_guide: "Guide",
     nav_my_chaps: "My library",
+    sidebar_section_chapse: "Chaps-e",
+    sidebar_section_profile: "Profile",
     profile_not_connected: "Not connected",
     profile_connected: "Connected: {email}",
     role_label: "{role}",
     role_admin: "Admin",
     role_user: "User",
-    language_toggle: "Passe en 🇫🇷 Français",
+    language_toggle: "Switch to 🇫🇷 Francais",
     password_btn: "Change password",
     password_modal_title: "Change password",
     password_modal_subtitle: "Set your new account password.",
@@ -178,8 +194,8 @@ const I18N = {
     create_user_error_edge_unreachable:
       "Unable to reach the Edge Function. Deploy `admin-create-user` on Supabase (Edge Functions) and check CORS.",
     create_user_error_failed: "Create user failed: {message}",
-    stats_btn: "Admin stats",
-    stats_title: "Admin stats",
+    stats_btn: "Administration",
+    stats_title: "Administration",
     stats_subtitle: "Stats across all users.",
     stats_total_saved: "Saved in library",
     stats_exports_png: "PNG exports",
@@ -191,34 +207,120 @@ const I18N = {
     stats_error_edge_unreachable:
       "Unable to reach the Edge Function. Deploy `admin-stats` on Supabase (Edge Functions) and check CORS.",
     stats_error_failed: "Unable to load stats: {message}",
+    diagnostics_btn: "Diagnostics",
+    diagnostics_title: "Diagnostics",
+    diagnostics_subtitle: "Checklist to validate the app wiring.",
+    diagnostics_run: "Run diagnostics",
+    diagnostics_running: "Running...",
+    diagnostics_done: "Diagnostics complete.",
+    diag_check_assets: "Assets loaded",
+    diag_check_supabase: "Supabase configuration",
+    diag_check_session: "Session",
+    diag_check_profile: "User profile (RLS)",
+    diag_check_chapse: "Library read/write (RLS)",
+    diag_check_exports: "Export tracking (RLS)",
+    diag_check_edge_stats: "Edge Function: admin-stats",
+    diag_check_edge_create_user: "Edge Function: admin-create-user",
+    diag_skip_admin_only: "Admin only.",
+    diag_skip_not_signed_in: "Sign in required.",
+    diag_meta_assets_ok: "No missing assets.",
+    diag_meta_assets_loading: "Assets are still loading.",
+    diag_meta_assets_missing: "Missing assets: {count}. Example: {path}",
+    diag_meta_supabase_ok: "Reachable.",
+    diag_meta_session_ok: "Signed in as {email}",
+    diag_meta_profile_ok: "Role: {role}",
+    diag_meta_chapse_ok: "Insert/select/delete OK.",
+    diag_meta_exports_ok: "Insert/select/delete OK.",
+    diag_meta_edge_ok: "Reachable.",
+    diag_meta_edge_create_user_ok: "Reachable (validation error expected).",
+    diag_meta_edge_http: "HTTP {status}: {message}",
+    diag_error_missing_table:
+      "Missing table: {table}. Run supabase/0001_init.sql in Supabase SQL Editor, then go to API → Reload schema and retry.",
+    diagnostics_summary_ok: "All checks passed.",
+    diagnostics_summary_fail: "{count} check(s) failed.",
+    admin_section_stats: "Statistics",
+    admin_section_users: "Users",
+    admin_users_col_email: "Email",
+    admin_users_col_name: "Name",
+    admin_users_col_role: "Role",
+    admin_users_col_created: "Created",
+    admin_users_col_id: "User ID",
+    admin_users_loading: "Loading users...",
+    admin_users_empty: "No users found.",
+    admin_users_error_missing_payload:
+      "Users list is not available. Redeploy the Edge Function `admin-stats`, then retry.",
+    admin_users_error_edge_unreachable:
+      "Unable to reach the Edge Function. Deploy `admin-stats` on Supabase (Edge Functions) and check CORS.",
+    admin_users_error_failed: "Unable to load users: {message}",
+    mychaps_load_more: "Load more",
+    mychaps_load_more_loading: "Loading...",
+    mychaps_tabs_aria: "Library filters",
+    mychaps_tab_all: "All",
+    mychaps_tab_favorites: "Favorites",
+    mychaps_tab_light: "Light skin",
+    mychaps_tab_dark: "Dark skin",
+    mychaps_filter_empty: "No Chap-e matches this filter.",
+    mychaps_fav_add: "Add to favorites",
+    mychaps_fav_remove: "Remove from favorites",
+    mychaps_fav_update_error: "Unable to update favorite: {message}",
+    mychaps_favorites_unavailable:
+      "Favorites are not enabled yet. This app expects a boolean column `public.chapse.is_favorite` (not a separate `favorites` table). Run the latest Supabase SQL migration, then Supabase Dashboard → API → Reload schema, then hard refresh the app.",
+    toast_success_title: "Success",
+    toast_error_title: "Error",
+    toast_info_title: "Info",
+    toast_close: "Close",
     logout_btn: "Sign out",
-    panel_title: "Configuration",
+    panel_title: "My Chap-e configurator",
+    picker_skin: "Skin",
     picker_left_arm: "Left arm",
     picker_right_arm: "Right arm",
     picker_eyes: "Eyes",
     picker_head: "Head",
     shadow_label: "Show shadow",
+    preset_random: "Random",
     preset_1: "Preset Example 1",
     preset_2: "Preset Example 2",
     preset_3: "Preset Example 3",
+    login_slide_1_title: "Assemble your Chap-e",
+    login_slide_1_desc: "Pick arms, eyes and head to craft a mascot in seconds.",
+    login_slide_2_title: "Export clean assets",
+    login_slide_2_desc: "Download your robot as SVG, PNG or JPG.",
+    login_slide_3_title: "Keep a library",
+    login_slide_3_desc: "Save your favorites to your account and reuse them anytime.",
     save_trigger: "Save",
     save_as_svg: "Export as SVG",
     save_as_png: "Export as PNG",
     save_as_jpg: "Export as JPG",
     save_to_library: "Save to My Library",
-    mychaps_title: "My library",
-    mychaps_subtitle: "Your saved Chap-e for your account.",
+    mychaps_title: "My saved Chaps-e library",
+    mychaps_subtitle: "",
+    mychaps_onboard_title: "Your library is empty",
+    mychaps_onboard_desc: "Create your first Chap-e in the Generator, then save it here.",
+    mychaps_onboard_step_1: "Open the Generator",
+    mychaps_onboard_step_2: "Customize your robot (arms, eyes, head, skin)",
+    mychaps_onboard_step_3: "Click Save → Save to My library",
+    mychaps_onboard_cta: "Create my first Chap-e",
     guide_prev: "Previous",
     guide_next: "Next",
     guide_title: "Usage guide",
+    guide_panel_title: "Usage guide",
     guide_subtitle: "Do and don't rules for using Chaps-e.",
+    guide_info_description: "Description",
+    guide_info_application: "Application",
+    guide_info_observation: "Observations",
     guide_case_1_title: "Rule #1: Light / Dark selection",
-    guide_case_1_intro_title: "Application:",
+    guide_case_1_desc_line_1: "Pick the skin that maximizes readability for the face and eyes.",
+    guide_case_1_intro_title: "Choose the right skin for the surface:",
     guide_case_1_intro_line_1: "Light Chaps-e: only on light background",
     guide_case_1_intro_line_2: "Dark Chaps-e: only on dark background",
+    guide_case_1_obs_line_1:
+      "If the background is mid-tone or busy, choose the skin that keeps the eyes clearly visible and avoid lowering contrast.",
     guide_case_2_title: "Rule #2: Use official assets",
+    guide_case_2_desc_line_1: "Chaps-e must keep official proportions and shapes. Assemble it only with official components.",
     guide_case_2_intro_title: "Chaps-e must be assembled using official Figma components:",
     guide_case_2_intro_line_1: "Forbidden: redraw, edit proportions, stretch, recolor...",
+    guide_case_2_obs_line_1:
+      "Do not modify the SVGs. If you need a new variant, request it so it stays consistent with the design system.",
     guide_examples_label: "Example",
     guide_do: "Do",
     guide_dont: "Don't",
@@ -238,12 +340,32 @@ const I18N = {
     library_use: "Use",
     library_delete: "Delete",
     library_delete_error: "Delete failed: {message}",
+    library_save_success: "Saved to your library.",
+    library_delete_success: "Deleted from your library.",
     save_default_name_prefix: "Chap-e",
+    label_rest_open_down_front: "Rest open down (front)",
+    label_hold_grip_down_in: "Hold grip down (in)",
+    label_hold_grip_down_side: "Hold grip down (side)",
+    label_wave_point_up_side: "Wave point up (side)",
+    label_hold_fist_up_side: "Hold fist up (side)",
+    label_rest_open_down_side: "Rest open down (side)",
+    label_rest_open_down_in: "Rest open down (in)",
+    label_wave_open_up_side: "Wave open up (side)",
+    label_default: "Default",
+    label_tilted: "Tilted",
+    label_happy: "Happy",
+    label_wink: "Wink",
+    label_loading: "Loading",
+    label_error: "Error",
+    label_stars: "Stars",
+    label_love: "Love",
     label_light: "Light",
     label_dark: "Dark",
   },
   fr: {
     app_title: "Chaps-e Generator by ChapsVision",
+    app_name: "Chaps-e Generator",
+    app_byline: "by ChapsVision",
     login_title: "Connexion",
     login_subtitle: "Compte interne ChapsVision",
     login_email_placeholder: "nom@entreprise.com",
@@ -257,7 +379,7 @@ const I18N = {
     login_error_required: "Email et mot de passe requis.",
     login_error_failed: "Connexion impossible: {message}",
     login_error_invalid_credentials_help:
-      "Identifiants invalides. Cree d'abord cet utilisateur dans Supabase Auth > Users avec l'email mparrino@chapsvision.com et le mot de passe admin, puis reconnecte-toi.",
+      "Cette app utilise Supabase Auth (Authentication > Users), pas la table Database `public.users`. Cette erreur veut generalement dire: mot de passe incorrect pour cet email, ou utilisateur cree sans mot de passe (invite/magic link). Definis/reinitialise le mot de passe dans Supabase Auth (min 6 caracteres), puis reessaie.",
     login_error_signed_out: "Deconnexion impossible: {message}",
     save_title: "Nommer ton Chap-e",
     save_subtitle: "Ce nom sera utilise dans ta bibliotheque.",
@@ -270,15 +392,17 @@ const I18N = {
     save_error_supabase: "Supabase non configure.",
     save_error_connect: "Connecte-toi pour sauvegarder.",
     save_error_missing_config: "Supabase non configure. Impossible de sauvegarder dans la bibliotheque.",
-    nav_generator: "Generator",
+    nav_generator: "Generateur",
     nav_guide: "Guide",
     nav_my_chaps: "Ma bibliotheque",
+    sidebar_section_chapse: "Chaps-e",
+    sidebar_section_profile: "Profil",
     profile_not_connected: "Non connecte",
     profile_connected: "Connecte: {email}",
     role_label: "{role}",
     role_admin: "Admin",
     role_user: "Utilisateur",
-    language_toggle: "Passe en 🇬🇧 Anglais",
+    language_toggle: "Passer en 🇬🇧 English",
     password_btn: "Modifier mon mot de passe",
     password_modal_title: "Modifier le mot de passe",
     password_modal_subtitle: "Definis ton nouveau mot de passe de compte.",
@@ -323,8 +447,8 @@ const I18N = {
     create_user_error_edge_unreachable:
       "Impossible de joindre l'Edge Function. Deploie `admin-create-user` sur Supabase (Edge Functions) et verifie le CORS.",
     create_user_error_failed: "Creation utilisateur impossible: {message}",
-    stats_btn: "Stats admin",
-    stats_title: "Stats admin",
+    stats_btn: "Administration",
+    stats_title: "Administration",
     stats_subtitle: "Stats sur l'ensemble des utilisateurs.",
     stats_total_saved: "Sauvegardes en bibliotheque",
     stats_exports_png: "Exports PNG",
@@ -336,34 +460,121 @@ const I18N = {
     stats_error_edge_unreachable:
       "Impossible de joindre l'Edge Function. Deploie `admin-stats` sur Supabase (Edge Functions) et verifie le CORS.",
     stats_error_failed: "Impossible de charger les stats: {message}",
+    diagnostics_btn: "Diagnostics",
+    diagnostics_title: "Diagnostics",
+    diagnostics_subtitle: "Checklist pour valider le branchement de l'app.",
+    diagnostics_run: "Lancer les diagnostics",
+    diagnostics_running: "En cours...",
+    diagnostics_done: "Diagnostics termines.",
+    diag_check_assets: "Chargement des assets",
+    diag_check_supabase: "Configuration Supabase",
+    diag_check_session: "Session",
+    diag_check_profile: "Profil utilisateur (RLS)",
+    diag_check_chapse: "Bibliotheque lecture/ecriture (RLS)",
+    diag_check_exports: "Tracking exports (RLS)",
+    diag_check_edge_stats: "Edge Function : admin-stats",
+    diag_check_edge_create_user: "Edge Function : admin-create-user",
+    diag_skip_admin_only: "Reserve aux admins.",
+    diag_skip_not_signed_in: "Connexion requise.",
+    diag_meta_assets_ok: "Aucun asset manquant.",
+    diag_meta_assets_loading: "Les assets sont encore en cours de chargement.",
+    diag_meta_assets_missing: "Assets manquants : {count}. Exemple : {path}",
+    diag_meta_supabase_ok: "Accessible.",
+    diag_meta_session_ok: "Connecte : {email}",
+    diag_meta_profile_ok: "Role : {role}",
+    diag_meta_chapse_ok: "Insert/select/delete OK.",
+    diag_meta_exports_ok: "Insert/select/delete OK.",
+    diag_meta_edge_ok: "Accessible.",
+    diag_meta_edge_create_user_ok: "Accessible (erreur de validation attendue).",
+    diag_meta_edge_http: "HTTP {status} : {message}",
+    diag_error_missing_table:
+      "Table manquante : {table}. Execute supabase/0001_init.sql dans Supabase SQL Editor, puis API → Reload schema et reessaie.",
+    diagnostics_summary_ok: "Tous les checks sont OK.",
+    diagnostics_summary_fail: "{count} check(s) en erreur.",
+    admin_section_stats: "Statistiques",
+    admin_section_users: "Utilisateurs",
+    admin_users_col_email: "Email",
+    admin_users_col_name: "Nom",
+    admin_users_col_role: "Role",
+    admin_users_col_created: "Cree le",
+    admin_users_col_id: "ID utilisateur",
+    admin_users_loading: "Chargement des utilisateurs...",
+    admin_users_empty: "Aucun utilisateur.",
+    admin_users_error_missing_payload:
+      "La liste des utilisateurs n'est pas disponible. Redéploie l'Edge Function `admin-stats`, puis reessaie.",
+    admin_users_error_edge_unreachable:
+      "Impossible de joindre l'Edge Function. Deploie `admin-stats` sur Supabase (Edge Functions) et verifie le CORS.",
+    admin_users_error_failed: "Impossible de charger les utilisateurs : {message}",
+    mychaps_load_more: "Charger plus",
+    mychaps_load_more_loading: "Chargement...",
+    mychaps_tabs_aria: "Filtres de la bibliotheque",
+    mychaps_tab_all: "Tous",
+    mychaps_tab_favorites: "Favoris",
+    mychaps_tab_light: "Skin clair",
+    mychaps_tab_dark: "Skin sombre",
+    mychaps_filter_empty: "Aucun Chap-e ne correspond a ce filtre.",
+    mychaps_fav_add: "Ajouter aux favoris",
+    mychaps_fav_remove: "Retirer des favoris",
+    mychaps_fav_update_error: "Impossible de mettre a jour le favori : {message}",
+    mychaps_favorites_unavailable:
+      "Les favoris ne sont pas encore actifs. L'app attend une colonne booleenne `public.chapse.is_favorite` (pas une table `favorites`). Applique la derniere migration SQL Supabase, puis Supabase Dashboard → API → Reload schema, puis recharge l'app (Cmd+Shift+R).",
+    toast_success_title: "Succes",
+    toast_error_title: "Erreur",
+    toast_info_title: "Info",
+    toast_close: "Fermer",
     logout_btn: "Se deconnecter",
-    panel_title: "Configuration",
+    panel_title: "Configurateur de mon Chaps-e",
+    picker_skin: "Skin",
     picker_left_arm: "Bras gauche",
     picker_right_arm: "Bras droit",
     picker_eyes: "Yeux",
     picker_head: "Tete",
-    shadow_label: "Afficher le shadow",
+    shadow_label: "Afficher l'ombre",
+    preset_random: "Aleatoire",
     preset_1: "Preset Exemple 1",
     preset_2: "Preset Exemple 2",
     preset_3: "Preset Exemple 3",
+    login_slide_1_title: "Assembler ton Chap-e",
+    login_slide_1_desc: "Choisis bras, yeux et tete pour creer une mascotte en quelques secondes.",
+    login_slide_2_title: "Exporter des assets propres",
+    login_slide_2_desc: "Telecharge ton robot en SVG, PNG ou JPG.",
+    login_slide_3_title: "Garder une bibliotheque",
+    login_slide_3_desc: "Sauvegarde tes favoris sur ton compte et reutilise-les quand tu veux.",
     save_trigger: "Sauvegarder",
     save_as_svg: "Enregistrer en SVG",
     save_as_png: "Enregistrer en PNG",
     save_as_jpg: "Enregistrer en JPG",
     save_to_library: "Sauvegarder dans Ma bibliotheque",
-    mychaps_title: "Ma bibliotheque",
-    mychaps_subtitle: "Tes Chap-e sauvegardes pour ton compte.",
+    mychaps_title: "Ma bibliothèque de Chaps-e sauvegardés",
+    mychaps_subtitle: "",
+    mychaps_onboard_title: "Ta bibliotheque est vide",
+    mychaps_onboard_desc: "Cree ton premier Chap-e dans le Generator, puis sauvegarde-le ici.",
+    mychaps_onboard_step_1: "Ouvre le Generator",
+    mychaps_onboard_step_2: "Personnalise ton robot (bras, yeux, tete, skin)",
+    mychaps_onboard_step_3: "Clique sur Sauvegarder → Ma bibliotheque",
+    mychaps_onboard_cta: "Creer mon premier Chap-e",
     guide_prev: "Precedent",
     guide_next: "Suivant",
-    guide_title: "Guide d'usage",
+    guide_title: "Guide d'utilisation",
+    guide_panel_title: "Guide d'utilisation",
     guide_subtitle: "Les do / don't d'utilisation de Chaps-e.",
+    guide_info_description: "Description",
+    guide_info_application: "Application",
+    guide_info_observation: "Observations",
     guide_case_1_title: "Regle n°1 : choix Light / Dark",
-    guide_case_1_intro_title: "Application :",
+    guide_case_1_desc_line_1: "Choisis le skin qui maximise la lisibilite du visage et des yeux.",
+    guide_case_1_intro_title: "Choisir le skin en fonction du fond :",
     guide_case_1_intro_line_1: "Light Chaps-e : uniquement sur fond clair",
     guide_case_1_intro_line_2: "Dark Chaps-e : uniquement sur fond sombre",
+    guide_case_1_obs_line_1:
+      "Si le fond est mi-teinte ou charge, choisis le skin qui garde les yeux bien visibles et evite de reduire le contraste.",
     guide_case_2_title: "Regle n°2 : usage des assets officiels",
+    guide_case_2_desc_line_1:
+      "Chaps-e doit garder les proportions officielles. Assemble-le uniquement avec des composants officiels.",
     guide_case_2_intro_title: "Chaps-e doit etre monte via les composants Figma :",
     guide_case_2_intro_line_1: "Interdit : redessiner, modifier les proportions, etirer, recolorer...",
+    guide_case_2_obs_line_1:
+      "Ne modifie pas les SVG. Si tu as besoin d'une variante, demande-la pour rester coherent avec le design system.",
     guide_examples_label: "Exemple",
     guide_do: "Do",
     guide_dont: "Don't",
@@ -383,7 +594,25 @@ const I18N = {
     library_use: "Utiliser",
     library_delete: "Supprimer",
     library_delete_error: "Suppression impossible: {message}",
+    library_save_success: "Sauvegarde dans ta bibliotheque.",
+    library_delete_success: "Supprime de ta bibliotheque.",
     save_default_name_prefix: "Chap-e",
+    label_rest_open_down_front: "Repos main ouverte (face)",
+    label_hold_grip_down_in: "Tenir pince bas (interieur)",
+    label_hold_grip_down_side: "Tenir pince bas (cote)",
+    label_wave_point_up_side: "Salut pointe haut (cote)",
+    label_hold_fist_up_side: "Poing leve (cote)",
+    label_rest_open_down_side: "Repos main ouverte (cote)",
+    label_rest_open_down_in: "Repos main ouverte (interieur)",
+    label_wave_open_up_side: "Salut main ouverte (cote)",
+    label_default: "Defaut",
+    label_tilted: "Inclinee",
+    label_happy: "Heureux",
+    label_wink: "Clin d'oeil",
+    label_loading: "Chargement",
+    label_error: "Erreur",
+    label_stars: "Etoiles",
+    label_love: "Amour",
     label_light: "Light",
     label_dark: "Dark",
   },
@@ -421,6 +650,9 @@ const EYES_TRANSFORMS_DEFAULT = {
   stars: { a: 1.0032008, b: 0, c: 0, d: 1.0032008, e: 26.4258, f: 15.9577 },
   wink: { a: 1, b: 0, c: 0, d: 1, e: 27.9339, f: 16.54 },
 };
+
+const EYES_TRANSFORMS_AUTO = {};
+let eyesMeasureBin = null;
 
 const HEAD_DEFAULT_EYE_ANCHORS = {
   left: { x: 35.146, y: 24.833 },
@@ -462,6 +694,7 @@ const ui = {
   saveModalName: byId("save-modal-name"),
   saveModalError: byId("save-modal-error"),
   saveCancel: byId("save-cancel"),
+  saveClose: byId("save-close"),
   passwordModal: byId("password-modal"),
   passwordForm: byId("password-form"),
   passwordNewInput: byId("password-new-input"),
@@ -469,6 +702,7 @@ const ui = {
   passwordConfirmBtn: byId("password-confirm-btn"),
   passwordModalError: byId("password-modal-error"),
   passwordCancel: byId("password-cancel"),
+  passwordClose: byId("password-close"),
   createUserModal: byId("create-user-modal"),
   createUserForm: byId("create-user-form"),
   createUserEmail: byId("create-user-email"),
@@ -477,28 +711,47 @@ const ui = {
   createUserNom: byId("create-user-nom"),
   createUserPrenom: byId("create-user-prenom"),
   createUserRole: byId("create-user-role"),
+  createUserRoleTrigger: byId("create-user-role-trigger"),
+  createUserRoleMenu: byId("create-user-role-menu"),
+  createUserRoleCurrent: byId("create-user-role-current"),
   createUserError: byId("create-user-error"),
   createUserCancel: byId("create-user-cancel"),
   createUserConfirmBtn: byId("create-user-confirm-btn"),
+  createUserClose: byId("create-user-close"),
+  diagnosticsModal: byId("diagnostics-modal"),
+  diagnosticsModalClose: byId("diagnostics-modal-close"),
+  diagnosticsModalRunBtn: byId("diagnostics-modal-run"),
+  diagnosticsModalList: byId("diagnostics-modal-list"),
 
   navGenerator: byId("nav-generator"),
   navGuide: byId("nav-guide"),
   navMyChaps: byId("nav-my-chaps"),
+  bottomNav: byId("bottom-nav"),
+  bottomNavGenerator: byId("bottom-nav-generator"),
+  bottomNavGuide: byId("bottom-nav-guide"),
+  bottomNavMyChaps: byId("bottom-nav-my-chaps"),
   viewGenerator: byId("view-generator"),
   viewGuide: byId("view-guide"),
   viewMyChaps: byId("view-my-chaps"),
   viewStats: byId("view-stats"),
+  viewDiagnostics: byId("view-diagnostics"),
   brandHome: byId("brand-home"),
+  mobileNavToggle: byId("mobile-nav-toggle"),
+  mobileNavOverlay: byId("mobile-nav-overlay"),
+  topbarHome: byId("topbar-home"),
 
   accountName: byId("account-name"),
   accountRole: byId("account-role"),
   profileAvatar: byId("profile-avatar"),
   profileMenuTrigger: byId("profile-menu-trigger"),
   profileMenu: byId("profile-menu"),
+  logoutQuickBtn: byId("logout-btn-quick"),
   langToggleBtn: byId("lang-toggle-btn"),
+  langToggleBtnMobile: byId("lang-toggle-btn-mobile"),
   passwordBtn: byId("password-btn"),
-  createUserBtn: byId("create-user-btn"),
+  passwordBtnMobile: byId("password-btn-mobile"),
   statsBtn: byId("stats-btn"),
+  statsBtnMobile: byId("stats-btn-mobile"),
   logoutBtn: byId("logout-btn"),
 
   skin: byId("skin"),
@@ -526,6 +779,7 @@ const ui = {
   pickerEyesCurrent: byId("picker-eyes-current"),
   pickerHeadCurrent: byId("picker-head-current"),
 
+  presetRandom: byId("preset-random"),
   preset1: byId("preset-1"),
   preset2: byId("preset-2"),
   preset3: byId("preset-3"),
@@ -541,16 +795,35 @@ const ui = {
   preview: byId("preview"),
   state: byId("state"),
 
+  loginSlideIllu1: byId("login-slide-1-illu"),
+  loginSlideIllu2: byId("login-slide-2-illu"),
+  loginSlideIllu3: byId("login-slide-3-illu"),
+  loginSlides: Array.from(document.querySelectorAll(".login-slide")),
+  loginDots: Array.from(document.querySelectorAll(".login-dot")),
+  loginSliderViewport: document.querySelector(".login-slider-viewport"),
+
   guidePrevBtn: byId("guide-prev-btn"),
   guideNextBtn: byId("guide-next-btn"),
   guideTabs: byId("guide-tabs"),
   guideCases: byId("guide-cases"),
   myChapsList: byId("mychaps-list"),
+  myChapsTabs: byId("mychaps-tabs"),
+  myChapsLoadMoreBtn: byId("mychaps-load-more"),
 
   statsError: byId("stats-error"),
   statTotalSaved: byId("stat-total-saved"),
   statExportsPng: byId("stat-exports-png"),
   statExportsJpg: byId("stat-exports-jpg"),
+  adminUsersError: byId("admin-users-error"),
+  adminUsersTbody: byId("admin-users-tbody"),
+
+  adminCreateUserShortcut: byId("admin-create-user-shortcut"),
+  adminDiagnosticsShortcut: byId("admin-diagnostics-shortcut"),
+
+  toastStack: byId("toast-stack"),
+
+  diagnosticsRunBtn: byId("diagnostics-run"),
+  diagnosticsList: byId("diagnostics-list"),
 };
 
 const pickerDefs = [];
@@ -568,6 +841,18 @@ let currentGuideCaseIndex = 0;
 let supabase = null;
 let supabaseReady = false;
 let authSubscription = null;
+let myChapsOffset = 0;
+let myChapsHasMore = false;
+let myChapsLoading = false;
+let myChapsFilter = "all";
+let myChapsCounts = null;
+let chapseSupportsFavorites = null;
+let myChapsCountsLoading = false;
+let warnedFavoritesColumnMissing = false;
+let diagnosticsRunning = false;
+let loginSlideIndex = 0;
+let loginSlideTimer = 0;
+let mobileNavOpen = false;
 
 bootstrap().catch((error) => {
   console.error(error);
@@ -581,11 +866,13 @@ async function bootstrap() {
   updatePresetEmojiLabels();
   applyStaticTranslations();
   bindEvents();
+  setLoginSlide(0);
   setGeneratorInteractive(false);
 
   ui.preview.innerHTML = `<div class="loading">${escapeHtml(t("loading_assets"))}</div>`;
   await loadAllAssets();
   assetsLoaded = true;
+  renderLoginSliderIllus();
 
   initVisualPickers();
   rebuildPickerMenus();
@@ -634,6 +921,88 @@ function setText(id, value) {
   element.textContent = value;
 }
 
+function showToast({ type = "info", title = "", message = "", timeoutMs = 4200 } = {}) {
+  if (!ui.toastStack) {
+    return;
+  }
+
+  const normalizedType = type === "success" || type === "error" ? type : "info";
+  const toast = document.createElement("div");
+  toast.className = `toast is-${normalizedType}`;
+
+  const icon = document.createElement("div");
+  icon.className = "toast-icon";
+  const iconName =
+    normalizedType === "success" ? "fa-circle-check" : normalizedType === "error" ? "fa-triangle-exclamation" : "fa-circle-info";
+  icon.innerHTML = `<i class="fa-solid ${iconName}" aria-hidden="true"></i>`;
+
+  const content = document.createElement("div");
+  content.className = "toast-content";
+
+  const titleEl = document.createElement("p");
+  titleEl.className = "toast-title";
+  titleEl.textContent = title || "";
+
+  const messageEl = document.createElement("p");
+  messageEl.className = "toast-message";
+  messageEl.textContent = message || "";
+
+  content.append(titleEl, messageEl);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "toast-close";
+  close.setAttribute("aria-label", t("toast_close"));
+  close.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+
+  function remove() {
+    toast.remove();
+  }
+
+  close.addEventListener("click", remove);
+
+  toast.append(icon, content, close);
+
+  // Keep the stack small.
+  while (ui.toastStack.children.length >= 4) {
+    ui.toastStack.firstElementChild?.remove();
+  }
+
+  ui.toastStack.appendChild(toast);
+
+  window.setTimeout(remove, Math.max(1200, Number(timeoutMs) || 4200));
+}
+
+function toastSuccess(message, options = {}) {
+  showToast({
+    type: "success",
+    title: t("toast_success_title"),
+    message,
+    timeoutMs: 3200,
+    ...options,
+  });
+}
+
+function toastError(message, options = {}) {
+  showToast({
+    type: "error",
+    title: t("toast_error_title"),
+    message,
+    timeoutMs: 6200,
+    ...options,
+  });
+}
+
+function toastInfo(message, options = {}) {
+  showToast({
+    type: "info",
+    title: t("toast_info_title"),
+    message,
+    timeoutMs: 4200,
+    ...options,
+  });
+}
+
 function initLanguage() {
   const saved = normalizeLanguage(localStorage.getItem(STORAGE_UI_LANG));
   setLanguage(saved, { persist: false });
@@ -661,6 +1030,8 @@ function setLanguage(nextLanguage, options = {}) {
 }
 
 function applyStaticTranslations() {
+  setText("login-app-name", t("app_name"));
+  setText("login-app-by", t("app_byline"));
   setText("login-title", t("login_title"));
   setText("login-subtitle", t("login_subtitle"));
   setText("login-email-label", "Email");
@@ -687,11 +1058,27 @@ function applyStaticTranslations() {
   setText("nav-generator-label", t("nav_generator"));
   setText("nav-guide-label", t("nav_guide"));
   setText("nav-my-chaps-label", t("nav_my_chaps"));
+  setText("bottom-nav-generator-label", t("nav_generator"));
+  setText("bottom-nav-guide-label", t("nav_guide"));
+  setText("bottom-nav-my-chaps-label", t("nav_my_chaps"));
+  setText("sidebar-section-chapse", t("sidebar_section_chapse"));
+  setText("sidebar-section-profile", t("sidebar_section_profile"));
   setText("lang-toggle-label", t("language_toggle"));
+  setText("lang-toggle-label-mobile", t("language_toggle"));
   setText("password-btn-label", t("password_btn"));
+  setText("password-btn-label-mobile", t("password_btn"));
   setText("create-user-btn-label", t("create_user_btn"));
+  setText("create-user-btn-label-mobile", t("create_user_btn"));
   setText("stats-btn-label", t("stats_btn"));
+  setText("stats-btn-label-mobile", t("stats_btn"));
+  setText("diagnostics-btn-label", t("diagnostics_btn"));
+  setText("diagnostics-btn-label-mobile", t("diagnostics_btn"));
   setText("logout-btn-label", t("logout_btn"));
+  const quickLogout = document.getElementById("logout-btn-quick");
+  if (quickLogout) {
+    quickLogout.setAttribute("aria-label", t("logout_btn"));
+    quickLogout.setAttribute("title", t("logout_btn"));
+  }
   setText("create-user-title", t("create_user_modal_title"));
   setText("create-user-subtitle", t("create_user_modal_subtitle"));
   setText("create-user-email-label", t("create_user_email_label"));
@@ -702,6 +1089,7 @@ function applyStaticTranslations() {
   setText("create-user-role-label", t("create_user_role_label"));
   setText("create-user-role-user", t("create_user_role_user"));
   setText("create-user-role-admin", t("create_user_role_admin"));
+  updateCreateUserRolePickerUi();
   setText("create-user-cancel", t("create_user_cancel"));
   setText("create-user-confirm-btn", t("create_user_confirm"));
   ui.createUserEmail.placeholder = t("create_user_email_placeholder");
@@ -711,11 +1099,13 @@ function applyStaticTranslations() {
   ui.createUserPrenom.placeholder = t("create_user_prenom_placeholder");
 
   setText("panel-title", t("panel_title"));
+  setText("picker-skin-label", t("picker_skin"));
   setText("picker-left-arm-label", t("picker_left_arm"));
   setText("picker-right-arm-label", t("picker_right_arm"));
   setText("picker-eyes-label", t("picker_eyes"));
   setText("picker-head-label", t("picker_head"));
   setText("shadow-label", t("shadow_label"));
+  setPresetButtonMeta(ui.presetRandom, t("preset_random"));
   setPresetButtonMeta(ui.preset1, t("preset_1"));
   setPresetButtonMeta(ui.preset2, t("preset_2"));
   setPresetButtonMeta(ui.preset3, t("preset_3"));
@@ -724,18 +1114,148 @@ function applyStaticTranslations() {
   setText("save-action-png-label", t("save_as_png"));
   setText("save-action-jpg-label", t("save_as_jpg"));
   setText("save-action-library-label", t("save_to_library"));
-  setText("guide-title", t("guide_title"));
-  setText("guide-subtitle", t("guide_subtitle"));
+  setText("login-slide-1-title", t("login_slide_1_title"));
+  setText("login-slide-1-desc", t("login_slide_1_desc"));
+  setText("login-slide-2-title", t("login_slide_2_title"));
+  setText("login-slide-2-desc", t("login_slide_2_desc"));
+  setText("login-slide-3-title", t("login_slide_3_title"));
+  setText("login-slide-3-desc", t("login_slide_3_desc"));
+  updateGuideSubtitle();
+  setText("guide-panel-title", t("guide_panel_title"));
   setText("guide-prev-label", t("guide_prev"));
   setText("guide-next-label", t("guide_next"));
   setText("stats-title", t("stats_title"));
   setText("stats-subtitle", t("stats_subtitle"));
+  setText("admin-create-user-shortcut-label", t("create_user_btn"));
+  setText("admin-diagnostics-shortcut-label", t("diagnostics_btn"));
+  setText("admin-section-stats-title", t("admin_section_stats"));
+  setText("admin-section-users-title", t("admin_section_users"));
+  setText("admin-users-th-email", t("admin_users_col_email"));
+  setText("admin-users-th-name", t("admin_users_col_name"));
+  setText("admin-users-th-role", t("admin_users_col_role"));
+  setText("admin-users-th-created", t("admin_users_col_created"));
+  setText("admin-users-th-id", t("admin_users_col_id"));
   setText("stats-total-saved-label", t("stats_total_saved"));
   setText("stats-exports-png-label", t("stats_exports_png"));
   setText("stats-exports-jpg-label", t("stats_exports_jpg"));
+  setText("diagnostics-title", t("diagnostics_title"));
+  setText("diagnostics-subtitle", t("diagnostics_subtitle"));
+  setText("diagnostics-run-label", t("diagnostics_run"));
+  setText("diagnostics-modal-title", t("diagnostics_title"));
+  setText("diagnostics-modal-subtitle", t("diagnostics_subtitle"));
+  setText("diagnostics-modal-run-label", t("diagnostics_run"));
   setText("mychaps-title", t("mychaps_title"));
   setText("mychaps-subtitle", t("mychaps_subtitle"));
+  setText("mychaps-load-more-label", t("mychaps_load_more"));
+  if (ui.myChapsTabs) {
+    ui.myChapsTabs.setAttribute("aria-label", t("mychaps_tabs_aria"));
+  }
+  renderMyChapsTabs();
+  document.querySelectorAll(".saved-fav-btn").forEach((node) => {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+    if (node instanceof HTMLButtonElement && node.disabled) {
+      node.setAttribute("aria-label", t("mychaps_favorites_unavailable"));
+      node.title = t("mychaps_favorites_unavailable");
+      return;
+    }
+    const isFav = node.dataset.favorite === "true" || node.classList.contains("is-active");
+    setSavedFavoriteButtonMeta(node, isFav);
+  });
   ui.preview.setAttribute("aria-label", t("preview_label"));
+}
+
+function updateGuideSubtitle() {
+  const guideCase = GUIDE_CASES[currentGuideCaseIndex];
+  if (guideCase?.titleKey) {
+    setText("guide-title", t(guideCase.titleKey));
+  } else {
+    setText("guide-title", t("guide_title"));
+  }
+}
+
+function renderLoginSliderIllus() {
+  if (!ui.loginSlideIllu1 || !ui.loginSlideIllu2 || !ui.loginSlideIllu3) {
+    return;
+  }
+  if (!assetsLoaded) {
+    return;
+  }
+
+  const slide2Config = {
+    ...PRESET_EXAMPLE_2,
+    // Use a non-default eyes layer so we can animate blinking.
+    eyes: "happy",
+  };
+
+  ui.loginSlideIllu1.innerHTML = buildRobotSvg(PRESET_EXAMPLE_1);
+  ui.loginSlideIllu2.innerHTML = buildRobotSvg(slide2Config);
+  ui.loginSlideIllu3.innerHTML = buildRobotSvg(PRESET_EXAMPLE_3);
+}
+
+function setLoginSlide(index) {
+  const slides = ui.loginSlides || [];
+  const dots = ui.loginDots || [];
+  if (!slides.length) {
+    return;
+  }
+
+  const prev = loginSlideIndex;
+  const next = Math.min(Math.max(Number(index) || 0, 0), slides.length - 1);
+  loginSlideIndex = next;
+
+  if (prev !== next && ui.loginSliderViewport) {
+    const isForward = (prev === slides.length - 1 && next === 0) || (next > prev && !(prev === 0 && next === slides.length - 1));
+    ui.loginSliderViewport.setAttribute("data-dir", isForward ? "forward" : "backward");
+  }
+
+  slides.forEach((slide, idx) => {
+    const isActive = idx === next;
+    slide.classList.toggle("is-active", isActive);
+    slide.setAttribute("aria-hidden", isActive ? "false" : "true");
+  });
+
+  dots.forEach((dot, idx) => {
+    const isActive = idx === next;
+    dot.classList.toggle("is-active", isActive);
+    dot.setAttribute("aria-current", isActive ? "true" : "false");
+  });
+}
+
+function stopLoginSlideAutoplay() {
+  if (!loginSlideTimer) {
+    return;
+  }
+  window.clearInterval(loginSlideTimer);
+  loginSlideTimer = 0;
+}
+
+function startLoginSlideAutoplay() {
+  stopLoginSlideAutoplay();
+
+  if (!ui.loginModal || ui.loginModal.hidden) {
+    return;
+  }
+
+  const slides = ui.loginSlides || [];
+  if (!slides.length) {
+    return;
+  }
+
+  loginSlideTimer = window.setInterval(() => {
+    if (ui.loginModal.hidden) {
+      stopLoginSlideAutoplay();
+      return;
+    }
+
+    const next = (loginSlideIndex + 1) % slides.length;
+    setLoginSlide(next);
+  }, LOGIN_SLIDE_AUTOPLAY_MS);
+}
+
+function restartLoginSlideAutoplay() {
+  startLoginSlideAutoplay();
 }
 
 function setupSupabase() {
@@ -925,16 +1445,30 @@ function normalizeUserProfile(raw, user) {
 
 function setCloudFeaturesEnabled(enabled) {
   ui.navMyChaps.disabled = !enabled;
+  ui.bottomNavMyChaps.disabled = !enabled;
   ui.saveActionLibrary.disabled = !enabled;
 }
 
 function bindEvents() {
   ui.loginForm.addEventListener("submit", onLoginSubmit);
   ui.logoutBtn.addEventListener("click", onLogoutClick);
+  ui.logoutQuickBtn.addEventListener("click", onLogoutClick);
   ui.passwordBtn.addEventListener("click", onPasswordResetClick);
-  ui.createUserBtn.addEventListener("click", onCreateUserClick);
+  ui.passwordBtnMobile.addEventListener("click", onPasswordResetClick);
   ui.statsBtn.addEventListener("click", onStatsClick);
+  ui.statsBtnMobile.addEventListener("click", onStatsClick);
   ui.langToggleBtn.addEventListener("click", onLanguageToggleClick);
+  ui.langToggleBtnMobile.addEventListener("click", onLanguageToggleClick);
+  ui.loginDots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      const index = Number(dot.dataset.slide || "0");
+      if (!Number.isInteger(index)) {
+        return;
+      }
+      setLoginSlide(index);
+      restartLoginSlideAutoplay();
+    });
+  });
   ui.profileMenuTrigger.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -945,24 +1479,132 @@ function bindEvents() {
   });
   ui.saveForm.addEventListener("submit", onSaveModalSubmit);
   ui.saveCancel.addEventListener("click", hideSaveModal);
+  ui.saveClose.addEventListener("click", hideSaveModal);
   ui.passwordForm.addEventListener("submit", onPasswordModalSubmit);
   ui.passwordCancel.addEventListener("click", hidePasswordModal);
+  ui.passwordClose.addEventListener("click", hidePasswordModal);
   ui.createUserForm.addEventListener("submit", onCreateUserSubmit);
   ui.createUserCancel.addEventListener("click", hideCreateUserModal);
+  ui.createUserClose.addEventListener("click", hideCreateUserModal);
+  ui.diagnosticsModalClose.addEventListener("click", hideDiagnosticsModal);
+  ui.diagnosticsModalRunBtn.addEventListener("click", async () => {
+    await runDiagnostics({
+      runBtn: ui.diagnosticsModalRunBtn,
+      runLabelId: "diagnostics-modal-run-label",
+      listEl: ui.diagnosticsModalList,
+    });
+  });
+  ui.createUserRoleTrigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleCreateUserRoleMenu();
+  });
+  ui.createUserRoleMenu.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const item = target.closest(".picker-item");
+    if (!(item instanceof HTMLElement)) {
+      return;
+    }
+    const value = String(item.dataset.value || "");
+    if (!USER_ROLES.includes(value)) {
+      return;
+    }
+    if (ui.createUserRole.value === value) {
+      closeCreateUserRoleMenu();
+      return;
+    }
+    ui.createUserRole.value = value;
+    updateCreateUserRolePickerUi();
+    closeCreateUserRoleMenu();
+  });
   ui.passwordNewInput.addEventListener("input", onPasswordFieldsInput);
   ui.passwordConfirmInput.addEventListener("input", onPasswordFieldsInput);
 
-  ui.navGenerator.addEventListener("click", () => showView("generator"));
-  ui.navGuide.addEventListener("click", () => showView("guide"));
+  ui.mobileNavToggle.addEventListener("click", () => {
+    toggleMobileNav();
+  });
+  ui.mobileNavOverlay.addEventListener("click", () => {
+    closeMobileNav();
+  });
+  ui.topbarHome.addEventListener("click", () => {
+    closeProfileMenu();
+    closeSaveMenu();
+    closeAllPickerMenus();
+    closeMobileNav();
+    showView("generator");
+  });
+
+  ui.navGenerator.addEventListener("click", () => {
+    closeMobileNav();
+    showView("generator");
+  });
+  ui.navGuide.addEventListener("click", () => {
+    closeMobileNav();
+    showView("guide");
+  });
   ui.navMyChaps.addEventListener("click", async () => {
+    closeMobileNav();
     showView("my-chaps");
     await renderMyChaps();
+  });
+
+  ui.bottomNavGenerator.addEventListener("click", () => {
+    closeProfileMenu();
+    closeSaveMenu();
+    closeAllPickerMenus();
+    closeMobileNav();
+    showView("generator");
+  });
+  ui.bottomNavGuide.addEventListener("click", () => {
+    closeProfileMenu();
+    closeSaveMenu();
+    closeAllPickerMenus();
+    closeMobileNav();
+    showView("guide");
+  });
+  ui.bottomNavMyChaps.addEventListener("click", async () => {
+    closeProfileMenu();
+    closeSaveMenu();
+    closeAllPickerMenus();
+    closeMobileNav();
+    showView("my-chaps");
+    await renderMyChaps();
+  });
+  ui.myChapsTabs.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const button = target.closest("[data-mychaps-filter]");
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    const nextFilter = normalizeMyChapsFilter(button.dataset.mychapsFilter);
+    if (nextFilter === myChapsFilter) {
+      return;
+    }
+    myChapsFilter = nextFilter;
+    renderMyChapsTabs();
+    await renderMyChaps();
+  });
+  ui.myChapsLoadMoreBtn.addEventListener("click", async () => {
+    await renderMyChaps({ append: true });
   });
   ui.brandHome.addEventListener("click", () => {
     closeProfileMenu();
     closeSaveMenu();
     closeAllPickerMenus();
+    closeMobileNav();
     showView("generator");
+  });
+  ui.adminCreateUserShortcut.addEventListener("click", onCreateUserClick);
+  ui.adminDiagnosticsShortcut.addEventListener("click", onDiagnosticsClick);
+  ui.diagnosticsRunBtn.addEventListener("click", async () => {
+    await runDiagnostics();
   });
   ui.guidePrevBtn.addEventListener("click", () => shiftGuideCase(-1));
   ui.guideNextBtn.addEventListener("click", () => shiftGuideCase(1));
@@ -994,6 +1636,7 @@ function bindEvents() {
   ui.head.addEventListener("change", onControlChange);
   ui.shadow.addEventListener("change", onControlChange);
 
+  ui.presetRandom.addEventListener("click", onRandomPresetClick);
   ui.preset1.addEventListener("click", () => applyPreset(PRESET_EXAMPLE_1));
   ui.preset2.addEventListener("click", () => applyPreset(PRESET_EXAMPLE_2));
   ui.preset3.addEventListener("click", () => applyPreset(PRESET_EXAMPLE_3));
@@ -1032,11 +1675,20 @@ function bindEvents() {
     if (!target.closest(".picker")) {
       closeAllPickerMenus();
     }
+    if (!target.closest('[data-picker="create-user-role"]')) {
+      closeCreateUserRoleMenu();
+    }
     if (!target.closest(".save-dropdown")) {
       closeSaveMenu();
     }
     if (!target.closest(".profile-menu-wrap")) {
       closeProfileMenu();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (!isMobileLayout()) {
+      closeMobileNav();
     }
   });
 }
@@ -1267,6 +1919,52 @@ function closeAllPickerMenus() {
   openedPickerKey = null;
 }
 
+function updateCreateUserRolePickerUi() {
+  if (!ui.createUserRole || !ui.createUserRoleMenu || !ui.createUserRoleCurrent) {
+    return;
+  }
+
+  const normalized = USER_ROLES.includes(String(ui.createUserRole.value || "")) ? ui.createUserRole.value : "user";
+  if (ui.createUserRole.value !== normalized) {
+    ui.createUserRole.value = normalized;
+  }
+
+  ui.createUserRoleCurrent.textContent = normalized === "admin" ? t("create_user_role_admin") : t("create_user_role_user");
+
+  const buttons = Array.from(ui.createUserRoleMenu.querySelectorAll(".picker-item"));
+  for (const button of buttons) {
+    const value = String(button.dataset.value || "");
+    button.classList.toggle("is-active", value === normalized);
+  }
+}
+
+function toggleCreateUserRoleMenu() {
+  if (!ui.createUserRoleMenu || !ui.createUserRoleTrigger) {
+    return;
+  }
+
+  if (!ui.createUserRoleMenu.hidden) {
+    closeCreateUserRoleMenu();
+    return;
+  }
+
+  closeAllPickerMenus();
+  closeSaveMenu();
+  closeProfileMenu();
+  updateCreateUserRolePickerUi();
+
+  ui.createUserRoleMenu.hidden = false;
+  ui.createUserRoleTrigger.setAttribute("aria-expanded", "true");
+}
+
+function closeCreateUserRoleMenu() {
+  if (!ui.createUserRoleMenu || !ui.createUserRoleTrigger) {
+    return;
+  }
+  ui.createUserRoleMenu.hidden = true;
+  ui.createUserRoleTrigger.setAttribute("aria-expanded", "false");
+}
+
 function toggleSaveMenu() {
   if (isSaveMenuOpen) {
     closeSaveMenu();
@@ -1281,6 +1979,46 @@ function closeSaveMenu() {
   ui.saveMenu.hidden = true;
   ui.saveMenuTrigger.setAttribute("aria-expanded", "false");
   isSaveMenuOpen = false;
+}
+
+function isMobileLayout() {
+  return window.matchMedia("(max-width: 920px)").matches;
+}
+
+function syncMobileNavUi() {
+  const isOpen = Boolean(mobileNavOpen);
+  document.body.classList.toggle("is-nav-open", isOpen);
+  ui.mobileNavOverlay.hidden = !isOpen;
+  ui.mobileNavToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  ui.mobileNavToggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+
+  const icon = ui.mobileNavToggle.querySelector("i");
+  if (icon) {
+    icon.className = isOpen ? "fa-solid fa-xmark icon-inline" : "fa-solid fa-bars icon-inline";
+  }
+}
+
+function openMobileNav() {
+  if (!isMobileLayout()) {
+    mobileNavOpen = false;
+    syncMobileNavUi();
+    return;
+  }
+  mobileNavOpen = true;
+  syncMobileNavUi();
+}
+
+function closeMobileNav() {
+  mobileNavOpen = false;
+  syncMobileNavUi();
+}
+
+function toggleMobileNav() {
+  if (mobileNavOpen) {
+    closeMobileNav();
+    return;
+  }
+  openMobileNav();
 }
 
 function toggleProfileMenu() {
@@ -1383,6 +2121,31 @@ function applyPreset(preset) {
   applyConfig({ ...preset, skin: activeSkin });
 }
 
+function pickRandom(list) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return null;
+  }
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function buildRandomConfig() {
+  const activeSkin = SKINS.includes(ui.skin.value) ? ui.skin.value : PRESET_EXAMPLE_1.skin;
+  return {
+    skin: activeSkin,
+    leftArm: pickRandom(LEFT_ARM_VARIANTS) || PRESET_EXAMPLE_1.leftArm,
+    rightArm: pickRandom(RIGHT_ARM_VARIANTS) || PRESET_EXAMPLE_1.rightArm,
+    eyes: pickRandom(EYE_EXPRESSIONS) || PRESET_EXAMPLE_1.eyes,
+    head: pickRandom(HEAD_INCLINATIONS) || PRESET_EXAMPLE_1.head,
+    shadowEnabled: Math.random() > 0.3,
+  };
+}
+
+function onRandomPresetClick() {
+  closeAllPickerMenus();
+  closeSaveMenu();
+  applyConfig(buildRandomConfig());
+}
+
 function render() {
   currentSvgMarkup = buildRobotSvg(currentConfig);
   ui.preview.innerHTML = currentSvgMarkup;
@@ -1420,18 +2183,25 @@ function buildRobotSvg(config) {
 
   if (config.eyes !== "default" && eyes) {
     const matrix = getEyesMatrix(config.head, config.eyes);
-    layers.push(layerMatrix(eyes, matrix));
-  }
-
-  if (config.shadowEnabled) {
     layers.push(
-      `<ellipse cx="${fmt(BASE_POS.shadow.cx)}" cy="${fmt(BASE_POS.shadow.cy)}" rx="${fmt(BASE_POS.shadow.rx)}" ry="${fmt(BASE_POS.shadow.ry)}" fill="#607C7F" fill-opacity="${fmt(BASE_POS.shadow.opacity)}"/>`,
+      `<g class="chapse-eyes-wrap" transform="matrix(${fmt(matrix.a)} ${fmt(matrix.b)} ${fmt(matrix.c)} ${fmt(matrix.d)} ${fmt(matrix.e)} ${fmt(matrix.f)})"><g class="chapse-eyes">${eyes.inner}</g></g>`,
     );
   }
 
+  const shadowMarkup = config.shadowEnabled
+    ? `<ellipse class="chapse-shadow" cx="${fmt(BASE_POS.shadow.cx)}" cy="${fmt(BASE_POS.shadow.cy)}" rx="${fmt(BASE_POS.shadow.rx)}" ry="${fmt(BASE_POS.shadow.ry)}" fill="#607C7F" fill-opacity="${fmt(BASE_POS.shadow.opacity)}"/>`
+    : "";
+
+  const exportPad = EXPORT_PADDING;
+  const exportWidth = EXPORT_SCENE.width;
+  const exportHeight = EXPORT_SCENE.height;
+
   return [
-    `<svg width="${SCENE.width}" height="${SCENE.height}" viewBox="0 0 ${SCENE.width} ${SCENE.height}" fill="none" xmlns="http://www.w3.org/2000/svg">`,
+    `<svg class="chapse-svg" width="${exportWidth}" height="${exportHeight}" viewBox="${-exportPad} ${-exportPad} ${exportWidth} ${exportHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">`,
+    shadowMarkup,
+    `<g class="chapse-body">`,
     ...layers,
+    "</g>",
     "</svg>",
   ].join("\n");
 }
@@ -1468,8 +2238,140 @@ function getArmOffset(side, variant, assetWidth) {
   };
 }
 
+function getEyesMeasureBin() {
+  if (eyesMeasureBin) {
+    return eyesMeasureBin;
+  }
+
+  const bin = document.createElement("div");
+  bin.id = "eyes-measure-bin";
+  bin.setAttribute("aria-hidden", "true");
+  bin.style.position = "absolute";
+  bin.style.left = "-10000px";
+  bin.style.top = "-10000px";
+  bin.style.width = "1px";
+  bin.style.height = "1px";
+  bin.style.opacity = "0";
+  bin.style.pointerEvents = "none";
+  bin.style.overflow = "visible";
+
+  document.body.appendChild(bin);
+  eyesMeasureBin = bin;
+  return bin;
+}
+
+function computeEyesMatrixAuto(expression) {
+  const key = String(expression || "");
+  if (!key) {
+    return null;
+  }
+  if (EYES_TRANSFORMS_AUTO[key]) {
+    return EYES_TRANSFORMS_AUTO[key];
+  }
+
+  const asset = assets.eyes.light[key];
+  if (!asset) {
+    return null;
+  }
+
+  const viewBox =
+    Array.isArray(asset.viewBox) && asset.viewBox.length === 4 && asset.viewBox[2] > 0 && asset.viewBox[3] > 0
+      ? asset.viewBox
+      : [0, 0, asset.width || 1, asset.height || 1];
+  const viewBoxStr = `${fmt(viewBox[0])} ${fmt(viewBox[1])} ${fmt(viewBox[2])} ${fmt(viewBox[3])}`;
+
+  let root = null;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxStr}">${asset.inner}</svg>`,
+      "image/svg+xml",
+    );
+    root = doc.documentElement;
+  } catch (error) {
+    console.warn("computeEyesMatrixAuto parse failed", key, error);
+    return null;
+  }
+
+  const topLevelShapes = Array.from(root.children).filter((node) => {
+    const tag = String(node.tagName || "").toLowerCase();
+    return tag && tag !== "g" && tag !== "defs";
+  });
+
+  if (topLevelShapes.length < 2) {
+    return null;
+  }
+
+  const measureSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  measureSvg.setAttribute("viewBox", viewBoxStr);
+  measureSvg.setAttribute("width", "100");
+  measureSvg.setAttribute("height", "100");
+
+  for (const node of topLevelShapes) {
+    measureSvg.appendChild(node.cloneNode(true));
+  }
+
+  const bin = getEyesMeasureBin();
+  bin.appendChild(measureSvg);
+
+  const centers = [];
+  try {
+    for (const child of Array.from(measureSvg.children)) {
+      try {
+        const bbox = child.getBBox();
+        centers.push({ x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 });
+      } catch (error) {
+        console.warn("computeEyesMatrixAuto getBBox failed", key, error);
+      }
+    }
+  } finally {
+    measureSvg.remove();
+  }
+
+  if (centers.length < 2) {
+    return null;
+  }
+
+  let left = centers[0];
+  let right = centers[0];
+  for (const center of centers) {
+    if (center.x < left.x) {
+      left = center;
+    }
+    if (center.x > right.x) {
+      right = center;
+    }
+  }
+
+  const srcDx = right.x - left.x;
+  const dstDx = HEAD_DEFAULT_EYE_ANCHORS.right.x - HEAD_DEFAULT_EYE_ANCHORS.left.x;
+
+  if (!Number.isFinite(srcDx) || srcDx <= 0 || !Number.isFinite(dstDx) || dstDx <= 0) {
+    return null;
+  }
+
+  const scale = dstDx / srcDx;
+  const srcMid = { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 };
+  const dstMid = {
+    x: (HEAD_DEFAULT_EYE_ANCHORS.left.x + HEAD_DEFAULT_EYE_ANCHORS.right.x) / 2,
+    y: (HEAD_DEFAULT_EYE_ANCHORS.left.y + HEAD_DEFAULT_EYE_ANCHORS.right.y) / 2,
+  };
+
+  const matrix = {
+    a: scale,
+    b: 0,
+    c: 0,
+    d: scale,
+    e: dstMid.x - scale * srcMid.x,
+    f: dstMid.y - scale * srcMid.y,
+  };
+
+  EYES_TRANSFORMS_AUTO[key] = matrix;
+  return matrix;
+}
+
 function getEyesMatrix(head, eyes) {
-  const base = EYES_TRANSFORMS_DEFAULT[eyes] || EYES_TRANSFORMS_DEFAULT.fallback;
+  const base = computeEyesMatrixAuto(eyes) || EYES_TRANSFORMS_DEFAULT[eyes] || EYES_TRANSFORMS_DEFAULT.fallback;
   if (head === "default") {
     return base;
   }
@@ -1672,6 +2574,7 @@ async function onLogoutClick() {
   hideCreateUserModal();
   closeSaveMenu();
   closeProfileMenu();
+  closeMobileNav();
 
   if (supabaseReady && supabase) {
     const { error } = await supabase.auth.signOut();
@@ -1684,6 +2587,8 @@ async function onLogoutClick() {
 
   currentUser = null;
   currentUserProfile = null;
+  myChapsCounts = null;
+  myChapsFilter = "all";
   updateAccountUi();
   showView("generator");
   showLoginModal();
@@ -1692,6 +2597,7 @@ async function onLogoutClick() {
 
 async function onPasswordResetClick() {
   closeProfileMenu();
+  closeMobileNav();
 
   if (!supabaseReady || !supabase) {
     ui.loginError.textContent = t("login_error_supabase");
@@ -1710,6 +2616,7 @@ async function onPasswordResetClick() {
 
 async function onCreateUserClick() {
   closeProfileMenu();
+  closeMobileNav();
 
   if (!supabaseReady || !supabase) {
     ui.loginError.textContent = t("create_user_error_supabase");
@@ -1732,6 +2639,7 @@ async function onStatsClick() {
   closeProfileMenu();
   closeSaveMenu();
   closeAllPickerMenus();
+  closeMobileNav();
   showView("stats");
   await renderStats();
 }
@@ -1742,51 +2650,504 @@ async function renderStats() {
   ui.statTotalSaved.textContent = "—";
   ui.statExportsPng.textContent = "—";
   ui.statExportsJpg.textContent = "—";
+  ui.adminUsersError.classList.remove("is-error");
+  ui.adminUsersError.textContent = "";
+  ui.adminUsersTbody.innerHTML = "";
 
   if (!supabaseReady || !supabase) {
     ui.statsError.classList.add("is-error");
     ui.statsError.textContent = t("stats_error_supabase");
+    ui.adminUsersError.classList.add("is-error");
+    ui.adminUsersError.textContent = t("stats_error_supabase");
     return;
   }
   if (!currentUser?.id) {
     ui.statsError.classList.add("is-error");
     ui.statsError.textContent = t("stats_error_connect");
+    ui.adminUsersError.classList.add("is-error");
+    ui.adminUsersError.textContent = t("stats_error_connect");
     showLoginModal();
     return;
   }
   if (!isCurrentUserAdmin()) {
     ui.statsError.classList.add("is-error");
     ui.statsError.textContent = t("stats_error_not_admin");
+    ui.adminUsersError.classList.add("is-error");
+    ui.adminUsersError.textContent = t("stats_error_not_admin");
     return;
   }
 
   ui.statsError.textContent = t("stats_loading");
+  ui.adminUsersError.textContent = t("admin_users_loading");
 
   const { data, error } = await supabase.functions.invoke("admin-stats", { body: {} });
   if (error) {
     const message = String(error.message || "");
     const lower = message.toLowerCase();
     ui.statsError.classList.add("is-error");
+    ui.adminUsersError.classList.add("is-error");
     if (lower.includes("failed to send a request") || lower.includes("failed to fetch")) {
       ui.statsError.textContent = t("stats_error_edge_unreachable");
+      ui.adminUsersError.textContent = t("admin_users_error_edge_unreachable");
       return;
     }
     if (lower.includes("forbidden")) {
       ui.statsError.textContent = t("stats_error_not_admin");
+      ui.adminUsersError.textContent = t("stats_error_not_admin");
       return;
     }
     ui.statsError.textContent = t("stats_error_failed", { message: message || "Unknown error" });
+    ui.adminUsersError.textContent = t("admin_users_error_failed", { message: message || "Unknown error" });
     return;
   }
 
   const totalSaved = Number(data?.total_saved ?? 0);
   const exportsPng = Number(data?.exports_png ?? 0);
   const exportsJpg = Number(data?.exports_jpg ?? 0);
+  const hasUsersPayload = Object.prototype.hasOwnProperty.call(data || {}, "users");
+  const users = Array.isArray(data?.users) ? data.users : [];
 
   ui.statsError.textContent = "";
   ui.statTotalSaved.textContent = Number.isFinite(totalSaved) ? String(totalSaved) : "0";
   ui.statExportsPng.textContent = Number.isFinite(exportsPng) ? String(exportsPng) : "0";
   ui.statExportsJpg.textContent = Number.isFinite(exportsJpg) ? String(exportsJpg) : "0";
+
+  if (!hasUsersPayload) {
+    ui.adminUsersError.classList.add("is-error");
+    ui.adminUsersError.textContent = t("admin_users_error_missing_payload");
+    ui.adminUsersTbody.innerHTML = "";
+    return;
+  }
+
+  renderAdminUsers(users);
+}
+
+function renderAdminUsers(users) {
+  ui.adminUsersTbody.innerHTML = "";
+  ui.adminUsersError.classList.remove("is-error");
+  ui.adminUsersError.textContent = "";
+
+  if (!Array.isArray(users) || users.length === 0) {
+    ui.adminUsersTbody.innerHTML = `<tr><td colspan="5" class="admin-users-empty">${escapeHtml(t("admin_users_empty"))}</td></tr>`;
+    return;
+  }
+
+  for (const raw of users) {
+    const email = String(raw?.email || "").trim();
+    const nom = String(raw?.nom || "").trim();
+    const prenom = String(raw?.prenom || "").trim();
+    const fullName = [prenom, nom].filter(Boolean).join(" ") || "—";
+    const role = raw?.role === "admin" ? "admin" : "user";
+    const roleLabel = t(`role_${role}`);
+    const createdAt = String(raw?.created_at || "").trim();
+    const userId = String(raw?.user_id || "").trim();
+    const shortId = userId ? `${userId.slice(0, 8)}…` : "—";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td title="${escapeHtml(email)}">${escapeHtml(email || "—")}</td>
+      <td title="${escapeHtml(fullName)}">${escapeHtml(fullName)}</td>
+      <td><span class="admin-role-chip ${role === "admin" ? "is-admin" : ""}">${escapeHtml(roleLabel)}</span></td>
+      <td title="${escapeHtml(createdAt)}">${escapeHtml(formatDateForAdmin(createdAt))}</td>
+      <td title="${escapeHtml(userId)}">${escapeHtml(shortId)}</td>
+    `;
+    ui.adminUsersTbody.appendChild(tr);
+  }
+}
+
+function formatDateForAdmin(iso) {
+  if (!iso) {
+    return "—";
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return iso;
+  }
+  return date.toLocaleString(getUiLocale(), { dateStyle: "medium", timeStyle: "short" });
+}
+
+function createDiagnosticRow(title) {
+  const row = document.createElement("article");
+  row.className = "diagnostic-row";
+
+  const icon = document.createElement("div");
+  icon.className = "diagnostic-icon";
+  icon.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>';
+
+  const body = document.createElement("div");
+
+  const titleEl = document.createElement("p");
+  titleEl.className = "diagnostic-title";
+  titleEl.textContent = title;
+
+  const meta = document.createElement("p");
+  meta.className = "diagnostic-meta";
+  meta.textContent = "";
+
+  body.append(titleEl, meta);
+  row.append(icon, body);
+
+  return { row, icon, meta };
+}
+
+function setDiagnosticRowState(ctx, state) {
+  const status = state?.status || "pending";
+  const message = String(state?.message || "");
+
+  ctx.row.classList.remove("is-ok", "is-fail", "is-skip");
+
+  if (status === "ok") {
+    ctx.row.classList.add("is-ok");
+    ctx.icon.innerHTML = '<i class="fa-solid fa-circle-check" aria-hidden="true"></i>';
+  } else if (status === "fail") {
+    ctx.row.classList.add("is-fail");
+    ctx.icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>';
+  } else if (status === "skip") {
+    ctx.row.classList.add("is-skip");
+    ctx.icon.innerHTML = '<i class="fa-solid fa-minus" aria-hidden="true"></i>';
+  } else {
+    ctx.icon.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>';
+  }
+
+  ctx.meta.textContent = message;
+}
+
+function getRuntimeSupabaseConfig() {
+  const runtimeConfig = window.CHAPSE_CONFIG || {};
+  return {
+    supabaseUrl: String(runtimeConfig.supabaseUrl || "").trim(),
+    supabaseAnonKey: String(runtimeConfig.supabaseAnonKey || "").trim(),
+  };
+}
+
+async function callEdgeFunctionRaw(functionName, body) {
+  const { supabaseUrl, supabaseAnonKey } = getRuntimeSupabaseConfig();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { ok: false, status: 0, json: null, text: "missing_config" };
+  }
+  if (!supabaseReady || !supabase) {
+    return { ok: false, status: 0, json: null, text: "supabase_not_ready" };
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token || "";
+  if (!token) {
+    return { ok: false, status: 0, json: null, text: "missing_session" };
+  }
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body || {}),
+  });
+
+  const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+
+  return { ok: res.ok, status: res.status, json, text };
+}
+
+function formatDiagHttp(status, payload) {
+  const message = String(payload?.message || payload?.error || payload || "").trim();
+  const trimmed = message.length > 160 ? `${message.slice(0, 160)}…` : message;
+  return t("diag_meta_edge_http", { status: String(status || 0), message: trimmed || "Unknown error" });
+}
+
+function isSupabaseMissingTableError(error, tableName) {
+  const message = String(error?.message || error || "").toLowerCase();
+  const table = String(tableName || "").toLowerCase();
+  if (!message || !table) {
+    return false;
+  }
+  return message.includes("schema cache") && (message.includes(`public.${table}`) || message.includes(table));
+}
+
+function formatSupabaseTableError(error, tableName) {
+  if (isSupabaseMissingTableError(error, tableName)) {
+    return t("diag_error_missing_table", { table: `public.${tableName}` });
+  }
+  return String(error?.message || error || "").trim();
+}
+
+async function onDiagnosticsClick() {
+  closeProfileMenu();
+  closeSaveMenu();
+  closeAllPickerMenus();
+  closeMobileNav();
+  showDiagnosticsModal();
+}
+
+async function runDiagnostics({ runBtn = ui.diagnosticsRunBtn, runLabelId = "diagnostics-run-label", listEl = ui.diagnosticsList } = {}) {
+  if (diagnosticsRunning) {
+    return;
+  }
+  if (!(runBtn instanceof HTMLButtonElement)) {
+    return;
+  }
+  if (!(listEl instanceof HTMLElement)) {
+    return;
+  }
+
+  diagnosticsRunning = true;
+  runBtn.disabled = true;
+  setText(runLabelId, t("diagnostics_running"));
+
+  listEl.innerHTML = "";
+
+  const checks = [
+    { id: "assets", titleKey: "diag_check_assets" },
+    { id: "supabase", titleKey: "diag_check_supabase" },
+    { id: "session", titleKey: "diag_check_session" },
+    { id: "profile", titleKey: "diag_check_profile" },
+    { id: "chapse", titleKey: "diag_check_chapse" },
+    { id: "exports", titleKey: "diag_check_exports" },
+    { id: "edge_stats", titleKey: "diag_check_edge_stats" },
+    { id: "edge_create_user", titleKey: "diag_check_edge_create_user" },
+  ];
+
+  const ctxById = new Map();
+  for (const check of checks) {
+    const ctx = createDiagnosticRow(t(check.titleKey));
+    ctxById.set(check.id, ctx);
+    listEl.appendChild(ctx.row);
+  }
+
+  let failCount = 0;
+
+  const mark = (id, state) => {
+    const ctx = ctxById.get(id);
+    if (!ctx) {
+      return;
+    }
+    setDiagnosticRowState(ctx, state);
+    if (state?.status === "fail") {
+      failCount += 1;
+    }
+  };
+
+  try {
+    // 1) Assets
+    if (!assetsLoaded) {
+      mark("assets", { status: "fail", message: t("diag_meta_assets_loading") });
+    } else if (assetLoadErrors.length) {
+      const first = assetLoadErrors[0];
+      mark("assets", {
+        status: "fail",
+        message: t("diag_meta_assets_missing", { count: String(assetLoadErrors.length), path: first?.path || "—" }),
+      });
+    } else {
+      mark("assets", { status: "ok", message: t("diag_meta_assets_ok") });
+    }
+
+    // 2) Supabase config + basic reachability
+    if (!supabaseReady || !supabase) {
+      mark("supabase", { status: "fail", message: t("login_error_missing_config") });
+    } else {
+      const { error } = await supabase.from(DB_TABLE_CHAPES).select("id").limit(1);
+      if (error) {
+        mark("supabase", { status: "fail", message: error.message });
+      } else {
+        mark("supabase", { status: "ok", message: t("diag_meta_supabase_ok") });
+      }
+    }
+
+    // 3) Session
+    let sessionUser = null;
+    if (!supabaseReady || !supabase) {
+      mark("session", { status: "skip", message: t("login_error_supabase") });
+    } else {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        mark("session", { status: "fail", message: error.message });
+      } else if (!data?.session?.user) {
+        mark("session", { status: "skip", message: t("diag_skip_not_signed_in") });
+      } else {
+        sessionUser = data.session.user;
+        mark("session", {
+          status: "ok",
+          message: t("diag_meta_session_ok", { email: String(sessionUser.email || "") }),
+        });
+      }
+    }
+
+    // 4) Profile (RLS)
+    if (!supabaseReady || !supabase) {
+      mark("profile", { status: "skip", message: t("login_error_supabase") });
+    } else if (!sessionUser?.id) {
+      mark("profile", { status: "skip", message: t("diag_skip_not_signed_in") });
+    } else {
+      const { data, error } = await supabase
+        .from(DB_TABLE_USERS)
+        .select("user_id, email, role")
+        .eq("user_id", sessionUser.id)
+      .maybeSingle();
+
+      if (error) {
+        mark("profile", { status: "fail", message: formatSupabaseTableError(error, DB_TABLE_USERS) });
+      } else if (!data?.user_id) {
+        mark("profile", { status: "fail", message: "profile_missing" });
+      } else {
+        mark("profile", {
+          status: "ok",
+          message: t("diag_meta_profile_ok", { role: String(data.role || "user") }),
+        });
+      }
+    }
+
+    // 5) Library RW (RLS)
+    if (!supabaseReady || !supabase) {
+      mark("chapse", { status: "skip", message: t("login_error_supabase") });
+    } else if (!sessionUser?.id) {
+      mark("chapse", { status: "skip", message: t("diag_skip_not_signed_in") });
+    } else {
+      let insertedId = "";
+      try {
+        const { data: created, error: createError } = await supabase
+          .from(DB_TABLE_CHAPES)
+          .insert({
+            user_id: sessionUser.id,
+            name: `__diagnostics__ ${new Date().toISOString()}`,
+            config_json: PRESET_EXAMPLE_1,
+          })
+          .select("id")
+          .single();
+
+        if (createError) {
+          mark("chapse", { status: "fail", message: formatSupabaseTableError(createError, DB_TABLE_CHAPES) });
+        } else {
+          insertedId = String(created?.id || "");
+          const { data: fetched, error: fetchError } = await supabase
+            .from(DB_TABLE_CHAPES)
+            .select("id")
+            .eq("id", insertedId)
+            .maybeSingle();
+
+          if (fetchError) {
+            mark("chapse", { status: "fail", message: formatSupabaseTableError(fetchError, DB_TABLE_CHAPES) });
+          } else if (!fetched?.id) {
+            mark("chapse", { status: "fail", message: "select_failed_or_rls" });
+          } else {
+            const { error: deleteError } = await supabase.from(DB_TABLE_CHAPES).delete().eq("id", insertedId);
+            if (deleteError) {
+              mark("chapse", { status: "fail", message: formatSupabaseTableError(deleteError, DB_TABLE_CHAPES) });
+            } else {
+              insertedId = "";
+              mark("chapse", { status: "ok", message: t("diag_meta_chapse_ok") });
+            }
+          }
+        }
+      } finally {
+        if (insertedId) {
+          await supabase.from(DB_TABLE_CHAPES).delete().eq("id", insertedId);
+        }
+      }
+    }
+
+    // 6) Export tracking (RLS)
+    if (!supabaseReady || !supabase) {
+      mark("exports", { status: "skip", message: t("login_error_supabase") });
+    } else if (!sessionUser?.id) {
+      mark("exports", { status: "skip", message: t("diag_skip_not_signed_in") });
+    } else {
+      let insertedId = "";
+      try {
+        const { data: created, error: createError } = await supabase
+          .from(DB_TABLE_EXPORT_EVENTS)
+          .insert({ user_id: sessionUser.id, format: "png" })
+          .select("id")
+          .single();
+        if (createError) {
+          mark("exports", { status: "fail", message: formatSupabaseTableError(createError, DB_TABLE_EXPORT_EVENTS) });
+        } else {
+          insertedId = String(created?.id || "");
+          const { data: fetched, error: fetchError } = await supabase
+            .from(DB_TABLE_EXPORT_EVENTS)
+            .select("id")
+            .eq("id", insertedId)
+            .maybeSingle();
+
+          if (fetchError) {
+            mark("exports", { status: "fail", message: formatSupabaseTableError(fetchError, DB_TABLE_EXPORT_EVENTS) });
+          } else if (!fetched?.id) {
+            mark("exports", { status: "fail", message: "select_failed_or_rls" });
+          } else {
+            const { error: deleteError } = await supabase.from(DB_TABLE_EXPORT_EVENTS).delete().eq("id", insertedId);
+            if (deleteError) {
+              mark("exports", { status: "fail", message: formatSupabaseTableError(deleteError, DB_TABLE_EXPORT_EVENTS) });
+            } else {
+              insertedId = "";
+              mark("exports", { status: "ok", message: t("diag_meta_exports_ok") });
+            }
+          }
+        }
+      } finally {
+        if (insertedId) {
+          await supabase.from(DB_TABLE_EXPORT_EVENTS).delete().eq("id", insertedId);
+        }
+      }
+    }
+
+    const isAdmin = isCurrentUserAdmin();
+
+    // 7) Edge Function: stats
+    if (!supabaseReady || !supabase) {
+      mark("edge_stats", { status: "skip", message: t("login_error_supabase") });
+    } else if (!sessionUser?.id) {
+      mark("edge_stats", { status: "skip", message: t("diag_skip_not_signed_in") });
+    } else if (!isAdmin) {
+      mark("edge_stats", { status: "skip", message: t("diag_skip_admin_only") });
+    } else {
+      const res = await callEdgeFunctionRaw("admin-stats", {});
+      if (res.ok) {
+        mark("edge_stats", { status: "ok", message: t("diag_meta_edge_ok") });
+      } else {
+        mark("edge_stats", { status: "fail", message: formatDiagHttp(res.status, res.json || res.text) });
+      }
+    }
+
+    // 8) Edge Function: create-user (admin-only reachability check)
+    if (!supabaseReady || !supabase) {
+      mark("edge_create_user", { status: "skip", message: t("login_error_supabase") });
+    } else if (!sessionUser?.id) {
+      mark("edge_create_user", { status: "skip", message: t("diag_skip_not_signed_in") });
+    } else if (!isAdmin) {
+      mark("edge_create_user", { status: "skip", message: t("diag_skip_admin_only") });
+    } else {
+      // Intentionally invalid payload: should return 400 without creating anything.
+      const res = await callEdgeFunctionRaw("admin-create-user", { email: "invalid", password: "x", nom: "", prenom: "" });
+      if (res.status === 400) {
+        mark("edge_create_user", { status: "ok", message: t("diag_meta_edge_create_user_ok") });
+      } else if (res.ok) {
+        // Unexpected: we should not create users from diagnostics.
+        mark("edge_create_user", { status: "fail", message: "unexpected_2xx" });
+      } else {
+        mark("edge_create_user", { status: "fail", message: formatDiagHttp(res.status, res.json || res.text) });
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    toastError(String(error?.message || error || "Diagnostics error"));
+  } finally {
+    diagnosticsRunning = false;
+    runBtn.disabled = false;
+    setText(runLabelId, t("diagnostics_run"));
+
+    if (failCount === 0) {
+      toastSuccess(t("diagnostics_summary_ok"));
+    } else {
+      toastError(t("diagnostics_summary_fail", { count: String(failCount) }));
+    }
+  }
 }
 
 async function onPasswordModalSubmit(event) {
@@ -1830,7 +3191,7 @@ async function onPasswordModalSubmit(event) {
   }
 
   hidePasswordModal();
-  alert(t("password_success"));
+  toastSuccess(t("password_success"));
 }
 
 function onPasswordFieldsInput() {
@@ -1858,6 +3219,7 @@ function updatePasswordSubmitState() {
 
 async function onLanguageToggleClick() {
   closeProfileMenu();
+  closeMobileNav();
   const next = currentLanguage === "en" ? "fr" : "en";
   setLanguage(next);
   await renderMyChaps();
@@ -1934,11 +3296,17 @@ async function onCreateUserSubmit(event) {
   }
 
   hideCreateUserModal();
-  alert(t("create_user_success"));
+  toastSuccess(t("create_user_success"));
 }
 
 function setCurrentUser(user) {
+  const prevId = currentUser?.id || null;
   currentUser = user;
+  const nextId = user?.id || null;
+  if (prevId !== nextId) {
+    myChapsCounts = null;
+    myChapsFilter = "all";
+  }
   updateAccountUi();
 }
 
@@ -1947,8 +3315,11 @@ function updateAccountUi() {
     ui.accountName.textContent = t("profile_not_connected");
     ui.accountRole.textContent = t("role_label", { role: t("role_user") });
     ui.profileAvatar.textContent = "CV";
-    ui.createUserBtn.hidden = true;
     ui.statsBtn.hidden = true;
+    ui.statsBtnMobile.hidden = true;
+    ui.adminCreateUserShortcut.hidden = true;
+    ui.adminDiagnosticsShortcut.hidden = true;
+    ui.logoutQuickBtn.hidden = true;
     return;
   }
 
@@ -1962,19 +3333,26 @@ function updateAccountUi() {
   ui.accountName.textContent = displayName || t("profile_connected", { email: fallbackEmail });
   ui.accountRole.textContent = t("role_label", { role: t(`role_${role}`) });
   ui.profileAvatar.textContent = buildInitials(displayName || fallbackEmail);
-  ui.createUserBtn.hidden = !isAdmin;
   ui.statsBtn.hidden = !isAdmin;
+  ui.statsBtnMobile.hidden = !isAdmin;
+  ui.adminCreateUserShortcut.hidden = !isAdmin;
+  ui.adminDiagnosticsShortcut.hidden = !isAdmin;
+  ui.logoutQuickBtn.hidden = false;
 }
 
 function showLoginModal() {
   hidePasswordModal();
   hideCreateUserModal();
+  hideDiagnosticsModal();
   ui.loginModal.hidden = false;
   lockApp();
+  setLoginSlide(0);
+  startLoginSlideAutoplay();
 }
 
 function hideLoginModal() {
   ui.loginModal.hidden = true;
+  stopLoginSlideAutoplay();
   unlockApp();
 }
 
@@ -2030,6 +3408,8 @@ function showCreateUserModal() {
     ui.createUserForm.reset();
   }
   ui.createUserRole.value = "user";
+  updateCreateUserRolePickerUi();
+  closeCreateUserRoleMenu();
   ui.createUserConfirmBtn.disabled = false;
   lockApp();
   ui.createUserEmail.focus();
@@ -2038,6 +3418,7 @@ function showCreateUserModal() {
 function hideCreateUserModal() {
   ui.createUserModal.hidden = true;
   ui.createUserError.textContent = "";
+  closeCreateUserRoleMenu();
   if (ui.createUserForm) {
     ui.createUserForm.reset();
   }
@@ -2045,12 +3426,30 @@ function hideCreateUserModal() {
   unlockApp();
 }
 
+function showDiagnosticsModal() {
+  hideSaveModal();
+  hidePasswordModal();
+  hideCreateUserModal();
+  ui.diagnosticsModal.hidden = false;
+  lockApp();
+
+  if (ui.diagnosticsModalList && !ui.diagnosticsModalList.childElementCount) {
+    ui.diagnosticsModalList.innerHTML = `<p class="empty-state">${escapeHtml(t("diagnostics_subtitle"))}</p>`;
+  }
+}
+
+function hideDiagnosticsModal() {
+  ui.diagnosticsModal.hidden = true;
+  unlockApp();
+}
+
 function lockApp() {
+  closeMobileNav();
   document.body.classList.add("is-locked");
 }
 
 function unlockApp() {
-  if (ui.loginModal.hidden && ui.saveModal.hidden && ui.passwordModal.hidden && ui.createUserModal.hidden) {
+  if (ui.loginModal.hidden && ui.saveModal.hidden && ui.passwordModal.hidden && ui.createUserModal.hidden && ui.diagnosticsModal.hidden) {
     document.body.classList.remove("is-locked");
   }
 }
@@ -2064,16 +3463,24 @@ function showView(view) {
   const isGuide = view === "guide";
   const isMyChaps = view === "my-chaps";
   const isStats = view === "stats";
+  const isDiagnostics = view === "diagnostics";
 
   ui.viewGenerator.classList.toggle("is-active", isGenerator);
   ui.viewGuide.classList.toggle("is-active", isGuide);
   ui.viewMyChaps.classList.toggle("is-active", isMyChaps);
   ui.viewStats.classList.toggle("is-active", isStats);
+  ui.viewDiagnostics.classList.toggle("is-active", isDiagnostics);
 
   ui.navGenerator.classList.toggle("is-active", isGenerator);
   ui.navGuide.classList.toggle("is-active", isGuide);
   ui.navMyChaps.classList.toggle("is-active", isMyChaps);
+
+  ui.bottomNavGenerator.classList.toggle("is-active", isGenerator);
+  ui.bottomNavGuide.classList.toggle("is-active", isGuide);
+  ui.bottomNavMyChaps.classList.toggle("is-active", isMyChaps);
 }
+
+
 
 function exportCurrentAsSvg() {
   if (!currentSvgMarkup) {
@@ -2092,7 +3499,7 @@ async function exportCurrentAsPng() {
     await exportPngFromSvgMarkup(currentSvgMarkup, fileName);
   } catch (error) {
     console.error(error);
-    alert(t("export_png_failed"));
+    toastError(t("export_png_failed"));
   }
 }
 
@@ -2105,7 +3512,7 @@ async function exportCurrentAsJpg() {
     await exportJpgFromSvgMarkup(currentSvgMarkup, fileName);
   } catch (error) {
     console.error(error);
-    alert(t("export_jpg_failed"));
+    toastError(t("export_jpg_failed"));
   }
 }
 
@@ -2142,6 +3549,7 @@ async function onSaveModalSubmit(event) {
   }
 
   hideSaveModal();
+  toastSuccess(t("library_save_success"));
   await renderMyChaps();
 }
 
@@ -2151,6 +3559,8 @@ function renderGuideCases() {
   }
 
   renderGuideNavigation();
+
+  updateGuideSubtitle();
 
   if (!assetsLoaded) {
     ui.guideCases.innerHTML = `<p class="empty-state">${escapeHtml(t("loading_assets"))}</p>`;
@@ -2163,42 +3573,79 @@ function renderGuideCases() {
     return;
   }
 
-  const introLines = guideCase.introLines
-    .map((lineKey) => `<p class="guide-rule-line">→ ${escapeHtml(t(lineKey))}</p>`)
+  const descriptionLines = Array.isArray(guideCase.descriptionLines) ? guideCase.descriptionLines : [];
+  const observationLines = Array.isArray(guideCase.observationLines) ? guideCase.observationLines : [];
+  const applicationLines = Array.isArray(guideCase.introLines) ? guideCase.introLines : [];
+
+  const descriptionMarkup = descriptionLines
+    .map((lineKey) => `<p class="guide-info-text">${escapeHtml(t(lineKey))}</p>`)
     .join("");
 
-  const cards = guideCase.items
-    .map((item) => {
-      const statusLabel = item.isDo ? t("guide_do") : t("guide_dont");
-      const statusClass = item.isDo ? "is-do" : "is-dont";
-      const statusIcon = item.isDo ? "fa-check" : "fa-xmark";
-      const surfaceClass = item.surface === "dark" ? "surface-dark" : "surface-light";
-      const noteMarkup = item.noteKey
-        ? `<p class="guide-card-note">${escapeHtml(t(item.noteKey))}</p>`
-        : "";
+  const observationMarkup = observationLines
+    .map((lineKey) => `<p class="guide-info-text">${escapeHtml(t(lineKey))}</p>`)
+    .join("");
 
-      return [
-        `<article class="guide-card ${surfaceClass}">`,
-        `<div class="guide-card-preview">${buildGuideItemPreview(item)}</div>`,
-        noteMarkup,
-        `<div class="guide-card-status ${statusClass}">`,
-        `<i class="fa-solid ${statusIcon}" aria-hidden="true"></i>`,
-        `<span>${escapeHtml(statusLabel)}</span>`,
-        "</div>",
-        "</article>",
-      ].join("");
-    })
+  const applicationLead = guideCase.introTitleKey ? `<p class="guide-info-lead">${escapeHtml(t(guideCase.introTitleKey))}</p>` : "";
+  const applicationList = applicationLines.length
+    ? `<ul class="guide-info-list">${applicationLines.map((lineKey) => `<li>${escapeHtml(t(lineKey))}</li>`).join("")}</ul>`
+    : "";
+
+  const renderCard = (item) => {
+    const statusLabel = item.isDo ? t("guide_do") : t("guide_dont");
+    const statusClass = item.isDo ? "is-do" : "is-dont";
+    const statusIcon = item.isDo ? "fa-check" : "fa-xmark";
+    const surfaceClass = item.surface === "dark" ? "surface-dark" : "surface-light";
+    const noteMarkup = item.noteKey ? `<p class="guide-card-note">${escapeHtml(t(item.noteKey))}</p>` : "";
+
+    return [
+      `<article class="guide-card ${surfaceClass}">`,
+      `<div class="guide-card-preview">${buildGuideItemPreview(item)}</div>`,
+      noteMarkup,
+      `<div class="guide-card-status ${statusClass}">`,
+      `<i class="fa-solid ${statusIcon}" aria-hidden="true"></i>`,
+      `<span>${escapeHtml(statusLabel)}</span>`,
+      "</div>",
+      "</article>",
+    ].join("");
+  };
+
+  const doCards = guideCase.items
+    .filter((item) => item.isDo)
+    .map((item) => renderCard(item))
+    .join("");
+
+  const dontCards = guideCase.items
+    .filter((item) => !item.isDo)
+    .map((item) => renderCard(item))
     .join("");
 
   ui.guideCases.innerHTML = [
     '<article class="guide-case">',
-    `<h3 class="guide-case-title">${escapeHtml(t(guideCase.titleKey))}</h3>`,
     '<div class="guide-case-body">',
-    '<div class="guide-application">',
-    `<p class="guide-application-title">${escapeHtml(t(guideCase.introTitleKey))}</p>`,
-    introLines,
-    "</div>",
-    `<div class="guide-grid">${cards}</div>`,
+    '<section class="guide-info" aria-label="Rule details">',
+    `<h2 id="guide-title" class="guide-rule-title">${escapeHtml(t(guideCase.titleKey))}</h2>`,
+    '<section class="guide-info-block">',
+    `<p class="guide-info-title">${escapeHtml(t("guide_info_description"))}</p>`,
+    descriptionMarkup || `<p class="guide-info-text">—</p>`,
+    "</section>",
+    '<section class="guide-info-block">',
+    `<p class="guide-info-title">${escapeHtml(t("guide_info_application"))}</p>`,
+    applicationLead,
+    applicationList,
+    "</section>",
+    '<section class="guide-info-block">',
+    `<p class="guide-info-title">${escapeHtml(t("guide_info_observation"))}</p>`,
+    observationMarkup || `<p class="guide-info-text">—</p>`,
+    "</section>",
+    "</section>",
+    '<section class="guide-col guide-col-do" aria-label="Do">',
+    `<header class="guide-col-head is-do">${escapeHtml(t("guide_do"))}</header>`,
+    `<div class="guide-col-cards">${doCards}</div>`,
+    "</section>",
+    '<section class="guide-col guide-col-dont" aria-label="Dont">',
+    `<header class="guide-col-head is-dont">${escapeHtml(t("guide_dont"))}</header>`,
+    `<div class="guide-col-cards">${dontCards}</div>`,
+    "</section>",
     "</div>",
     "</article>",
   ].join("");
@@ -2223,13 +3670,12 @@ function renderGuideNavigation() {
 
   ui.guideTabs.innerHTML = GUIDE_CASES.map((guideCase, index) => {
     const isActive = index === currentGuideCaseIndex;
-    const activeClass = isActive ? " is-active" : "";
     const title = escapeHtml(t(guideCase.titleKey));
     return [
-      `<button type="button" class="guide-tab${activeClass}" role="tab" aria-controls="guide-cases"`,
-      `aria-selected="${isActive ? "true" : "false"}"`,
-      `title="${title}" aria-label="${title}" data-guide-index="${index}">`,
-      `${index + 1}`,
+      `<button type="button" class="guide-rule-btn${isActive ? " is-active" : ""}"`,
+      `aria-pressed="${isActive ? "true" : "false"}" data-guide-index="${index}">`,
+      `<span class="guide-rule-index" aria-hidden="true">${index + 1}</span>`,
+      `<span class="guide-rule-label">${title}</span>`,
       "</button>",
     ].join(" ");
   }).join("");
@@ -2273,60 +3719,416 @@ function buildGuideRobotConfig(skin) {
   };
 }
 
-async function renderMyChaps() {
-  ui.myChapsList.innerHTML = "";
+function normalizeMyChapsFilter(raw) {
+  const value = String(raw || "").trim().toLowerCase();
+  if (value === "favorites" || value === "light" || value === "dark" || value === "all") {
+    return value;
+  }
+  return "all";
+}
+
+function isSchemaCacheMissingColumn(error, columnName) {
+  const code = String(error?.code || "");
+  const message = String(error?.message || "");
+  const column = String(columnName || "");
+  if (!column) {
+    return false;
+  }
+  const lower = message.toLowerCase();
+  const lowerColumn = column.toLowerCase();
+  if (code === "PGRST204" && lower.includes(lowerColumn)) {
+    return true;
+  }
+  if (lower.includes("schema cache") && lower.includes(lowerColumn)) {
+    return true;
+  }
+  if (lower.includes("column") && lower.includes(lowerColumn) && lower.includes("does not exist")) {
+    return true;
+  }
+  return false;
+}
+
+async function refreshMyChapsCounts() {
+  if (!ui.myChapsTabs) {
+    return null;
+  }
+
+  if (!supabaseReady || !supabase || !currentUser?.id) {
+    myChapsCounts = null;
+    renderMyChapsTabs();
+    return null;
+  }
+
+  if (myChapsCountsLoading) {
+    return myChapsCounts;
+  }
+
+  myChapsCountsLoading = true;
+
+  const selectCount = { count: "exact", head: true };
+
+  const allPromise = supabase.from(DB_TABLE_CHAPES).select("id", selectCount);
+  const lightPromise = supabase.from(DB_TABLE_CHAPES).select("id", selectCount).eq("config_json->>skin", "light");
+  const darkPromise = supabase.from(DB_TABLE_CHAPES).select("id", selectCount).eq("config_json->>skin", "dark");
+
+  const shouldQueryFavorites = chapseSupportsFavorites !== false;
+  const favoritesPromise = shouldQueryFavorites
+    ? supabase.from(DB_TABLE_CHAPES).select("id", selectCount).eq("is_favorite", true)
+    : Promise.resolve({ count: 0, error: null });
+
+  const [allRes, lightRes, darkRes, favoritesRes] = await Promise.all([
+    allPromise,
+    lightPromise,
+    darkPromise,
+    favoritesPromise,
+  ]);
+
+  const totalCount = Number(allRes.count ?? 0) || 0;
+  const lightCount = Number(lightRes.count ?? 0) || 0;
+  const darkCount = Number(darkRes.count ?? 0) || 0;
+
+  let favoritesCount = Number(favoritesRes.count ?? 0) || 0;
+
+  if (favoritesRes?.error) {
+    if (isSchemaCacheMissingColumn(favoritesRes.error, "is_favorite")) {
+      chapseSupportsFavorites = false;
+      favoritesCount = 0;
+      if (!warnedFavoritesColumnMissing) {
+        warnedFavoritesColumnMissing = true;
+        toastInfo(t("mychaps_favorites_unavailable"), { timeoutMs: 9000 });
+      }
+    } else {
+      console.error(favoritesRes.error);
+    }
+  } else if (shouldQueryFavorites) {
+    chapseSupportsFavorites = true;
+  }
+
+  myChapsCounts = {
+    all: totalCount,
+    favorites: favoritesCount,
+    light: lightCount,
+    dark: darkCount,
+  };
+
+  myChapsCountsLoading = false;
+  renderMyChapsTabs();
+  return myChapsCounts;
+}
+
+function renderMyChapsTabs() {
+  if (!ui.myChapsTabs) {
+    return;
+  }
+
+  if (!supabaseReady || !supabase || !currentUser?.id || !myChapsCounts) {
+    ui.myChapsTabs.innerHTML = "";
+    ui.myChapsTabs.hidden = true;
+    return;
+  }
+
+  const prevFilter = myChapsFilter;
+
+  const defs = [
+    { key: "all", labelKey: "mychaps_tab_all", count: myChapsCounts.all, hideWhenZero: false },
+    {
+      key: "favorites",
+      labelKey: "mychaps_tab_favorites",
+      count: myChapsCounts.favorites,
+      hideWhenZero: true,
+      needsFavorites: true,
+    },
+    { key: "light", labelKey: "mychaps_tab_light", count: myChapsCounts.light, hideWhenZero: true },
+    { key: "dark", labelKey: "mychaps_tab_dark", count: myChapsCounts.dark, hideWhenZero: true },
+  ];
+
+  const available = defs
+    .filter((def) => {
+      if (def.needsFavorites && chapseSupportsFavorites === false) {
+        return false;
+      }
+      if (def.hideWhenZero && (Number(def.count) || 0) === 0) {
+        return false;
+      }
+      return true;
+    })
+    .map((def) => def.key);
+
+  if (!available.includes(myChapsFilter)) {
+    myChapsFilter = "all";
+  }
+
+  const filterChanged = prevFilter !== myChapsFilter;
+
+  const html = defs
+    .filter((def) => available.includes(def.key))
+    .map((def) => {
+      const isActive = def.key === myChapsFilter;
+      const activeClass = isActive ? " is-active" : "";
+      const label = escapeHtml(t(def.labelKey));
+      const count = escapeHtml(String(def.count));
+      return [
+        `<button type="button" class="mychaps-tab${activeClass}" role="tab"`,
+        `aria-selected="${isActive ? "true" : "false"}"`,
+        `data-mychaps-filter="${escapeHtml(def.key)}">`,
+        `<span class="mychaps-tab-label">${label}</span>`,
+        `<span class="mychaps-tab-count" aria-label="${label} ${count}">${count}</span>`,
+        "</button>",
+      ].join(" ");
+    })
+    .join("");
+
+  ui.myChapsTabs.innerHTML = html;
+  ui.myChapsTabs.hidden = !html;
+
+  if (filterChanged && ui.viewMyChaps.classList.contains("is-active") && !myChapsLoading) {
+    renderMyChaps().catch((error) => {
+      console.error(error);
+    });
+  }
+}
+
+async function renderMyChaps(options = {}) {
+  const append = options.append === true;
+
+  if (myChapsLoading) {
+    return;
+  }
+
+  if (!append) {
+    myChapsOffset = 0;
+    myChapsHasMore = false;
+    ui.myChapsList.innerHTML = "";
+    ui.myChapsLoadMoreBtn.hidden = true;
+  }
+
+  ui.myChapsLoadMoreBtn.disabled = true;
+  setText("mychaps-load-more-label", t("mychaps_load_more_loading"));
 
   if (!supabaseReady || !supabase) {
-    const empty = document.createElement("p");
-    empty.className = "empty-state";
-    empty.textContent = t("library_missing_config");
-    ui.myChapsList.appendChild(empty);
+    ui.myChapsTabs.hidden = true;
+    if (!append) {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = t("library_missing_config");
+      ui.myChapsList.appendChild(empty);
+    }
+    setText("mychaps-load-more-label", t("mychaps_load_more"));
     return;
   }
 
   if (!currentUser || !currentUser.id) {
-    const empty = document.createElement("p");
-    empty.className = "empty-state";
-    empty.textContent = t("library_not_connected");
-    ui.myChapsList.appendChild(empty);
+    ui.myChapsTabs.hidden = true;
+    if (!append) {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = t("library_not_connected");
+      ui.myChapsList.appendChild(empty);
+    }
+    setText("mychaps-load-more-label", t("mychaps_load_more"));
     return;
   }
 
-  const { data, error } = await supabase
-    .from(DB_TABLE_CHAPES)
-    .select("id, name, config_json, created_at")
-    .order("created_at", { ascending: false });
+  ui.myChapsTabs.hidden = !myChapsCounts;
+  renderMyChapsTabs();
+  if (!append) {
+    refreshMyChapsCounts().catch((error) => {
+      console.error(error);
+    });
+  }
+
+  if (myChapsFilter === "favorites" && chapseSupportsFavorites === false) {
+    myChapsFilter = "all";
+    renderMyChapsTabs();
+  }
+
+  myChapsLoading = true;
+
+  const from = myChapsOffset;
+  const to = myChapsOffset + MYCHAPS_PAGE_SIZE; // +1 row to detect "has more"
+
+  let columns = "id, name, config_json, created_at";
+  if (chapseSupportsFavorites !== false) {
+    columns = `${columns}, is_favorite`;
+  }
+
+  let query = supabase.from(DB_TABLE_CHAPES).select(columns).order("created_at", { ascending: false });
+
+  if (myChapsFilter === "favorites" && chapseSupportsFavorites !== false) {
+    query = query.eq("is_favorite", true);
+  } else if (myChapsFilter === "light") {
+    query = query.eq("config_json->>skin", "light");
+  } else if (myChapsFilter === "dark") {
+    query = query.eq("config_json->>skin", "dark");
+  }
+
+  query = query.range(from, to);
+
+  let { data, error } = await query;
+
+  if (error && chapseSupportsFavorites !== false && isSchemaCacheMissingColumn(error, "is_favorite")) {
+    chapseSupportsFavorites = false;
+    if (!warnedFavoritesColumnMissing) {
+      warnedFavoritesColumnMissing = true;
+      toastInfo(t("mychaps_favorites_unavailable"), { timeoutMs: 9000 });
+    }
+
+    if (myChapsFilter === "favorites") {
+      myChapsFilter = "all";
+      renderMyChapsTabs();
+    }
+
+    let fallbackQuery = supabase
+      .from(DB_TABLE_CHAPES)
+      .select("id, name, config_json, created_at")
+      .order("created_at", { ascending: false });
+
+    if (myChapsFilter === "light") {
+      fallbackQuery = fallbackQuery.eq("config_json->>skin", "light");
+    } else if (myChapsFilter === "dark") {
+      fallbackQuery = fallbackQuery.eq("config_json->>skin", "dark");
+    }
+
+    fallbackQuery = fallbackQuery.range(from, to);
+    const retry = await fallbackQuery;
+    data = retry.data;
+    error = retry.error;
+  }
+
+  myChapsLoading = false;
 
   if (error) {
-    const empty = document.createElement("p");
-    empty.className = "empty-state";
-    empty.textContent = t("library_load_error", { message: error.message });
-    ui.myChapsList.appendChild(empty);
+    if (!append) {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = t("library_load_error", { message: error.message });
+      ui.myChapsList.appendChild(empty);
+    } else {
+      toastError(t("library_load_error", { message: error.message }));
+    }
+    setText("mychaps-load-more-label", t("mychaps_load_more"));
     return;
   }
 
-  const saved = (data || []).map((entry) => ({
+  const rows = Array.isArray(data) ? data : [];
+  myChapsHasMore = rows.length > MYCHAPS_PAGE_SIZE;
+  if (myChapsHasMore) {
+    rows.pop();
+  }
+
+  const saved = rows.map((entry) => ({
     id: entry.id,
     name: entry.name,
     config: sanitizeConfig(entry.config_json),
     createdAt: entry.created_at,
+    isFavorite: entry.is_favorite === true,
   }));
 
-  if (!saved.length) {
-    const empty = document.createElement("p");
-    empty.className = "empty-state";
-    empty.textContent = t("library_empty");
-    ui.myChapsList.appendChild(empty);
+  myChapsOffset += saved.length;
+
+  if (!append && !saved.length) {
+    if (myChapsFilter !== "all") {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = t("mychaps_filter_empty");
+      ui.myChapsList.appendChild(empty);
+      setText("mychaps-load-more-label", t("mychaps_load_more"));
+      ui.myChapsLoadMoreBtn.hidden = true;
+      ui.myChapsLoadMoreBtn.disabled = false;
+      return;
+    }
+
+    const card = document.createElement("article");
+    card.className = "mychaps-onboard";
+
+    const illu = document.createElement("div");
+    illu.className = "mychaps-onboard-illu";
+    illu.innerHTML = buildRobotSvg({ ...PRESET_EXAMPLE_1, skin: "light", eyes: "error" });
+
+    const badge = document.createElement("div");
+    badge.className = "mychaps-onboard-badge";
+    badge.textContent = "😵";
+    illu.appendChild(badge);
+
+    const content = document.createElement("div");
+    content.className = "mychaps-onboard-content";
+
+    const title = document.createElement("h3");
+    title.className = "mychaps-onboard-title";
+    title.textContent = t("mychaps_onboard_title");
+
+    const desc = document.createElement("p");
+    desc.className = "mychaps-onboard-desc";
+    desc.textContent = t("mychaps_onboard_desc");
+
+    const steps = document.createElement("ul");
+    steps.className = "mychaps-onboard-steps";
+    ["mychaps_onboard_step_1", "mychaps_onboard_step_2", "mychaps_onboard_step_3"].forEach((key) => {
+      const li = document.createElement("li");
+      li.textContent = t(key);
+      steps.appendChild(li);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "mychaps-onboard-actions";
+
+    const cta = document.createElement("button");
+    cta.type = "button";
+    cta.className = "mychaps-onboard-cta";
+    cta.innerHTML = `<i class="fa-regular fa-image icon-inline" aria-hidden="true"></i><span>${escapeHtml(
+      t("mychaps_onboard_cta"),
+    )}</span>`;
+    cta.addEventListener("click", () => {
+      closeProfileMenu();
+      closeSaveMenu();
+      closeAllPickerMenus();
+      showView("generator");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    actions.appendChild(cta);
+    content.append(title, desc, steps, actions);
+    card.append(illu, content);
+    ui.myChapsList.appendChild(card);
+    setText("mychaps-load-more-label", t("mychaps_load_more"));
+    ui.myChapsLoadMoreBtn.hidden = true;
+    ui.myChapsLoadMoreBtn.disabled = false;
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+
   for (const entry of saved) {
     const card = document.createElement("article");
-    card.className = "saved-card";
+    const isDarkSkin = entry.config?.skin === "dark";
+    card.className = `saved-card${isDarkSkin ? " is-dark" : ""}`;
 
     const preview = document.createElement("div");
     preview.className = "saved-preview";
     preview.innerHTML = buildRobotSvg(entry.config);
+
+    const favBtn = document.createElement("button");
+    favBtn.type = "button";
+    favBtn.className = `saved-fav-btn${entry.isFavorite ? " is-active" : ""}`;
+    favBtn.disabled = chapseSupportsFavorites === false;
+    if (favBtn.disabled) {
+      favBtn.dataset.favorite = entry.isFavorite ? "true" : "false";
+      favBtn.setAttribute("aria-label", t("mychaps_favorites_unavailable"));
+      favBtn.title = t("mychaps_favorites_unavailable");
+    } else {
+      setSavedFavoriteButtonMeta(favBtn, entry.isFavorite);
+    }
+    favBtn.innerHTML = `<i class="${entry.isFavorite ? "fa-solid" : "fa-regular"} fa-star" aria-hidden="true"></i>`;
+    favBtn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (favBtn.disabled) {
+        toastInfo(t("mychaps_favorites_unavailable"), { timeoutMs: 9000 });
+        return;
+      }
+      await toggleSavedFavorite(entry, favBtn);
+    });
+    preview.appendChild(favBtn);
 
     const meta = document.createElement("div");
     meta.className = "saved-meta";
@@ -2356,8 +4158,9 @@ async function renderMyChaps() {
 
     const useBtn = document.createElement("button");
     useBtn.type = "button";
-    useBtn.innerHTML =
-      `<i class="fa-regular fa-circle-check icon-inline" aria-hidden="true"></i><span>${escapeHtml(t("library_use"))}</span>`;
+    useBtn.innerHTML = `<i class="fa-regular fa-circle-check icon-inline" aria-hidden="true"></i><span>${escapeHtml(
+      t("library_use"),
+    )}</span>`;
     useBtn.addEventListener("click", () => {
       applyConfig(entry.config);
       showView("generator");
@@ -2365,8 +4168,7 @@ async function renderMyChaps() {
 
     const svgBtn = document.createElement("button");
     svgBtn.type = "button";
-    svgBtn.innerHTML =
-      '<i class="fa-regular fa-file-lines icon-inline" aria-hidden="true"></i><span>SVG</span>';
+    svgBtn.innerHTML = '<i class="fa-regular fa-file-lines icon-inline" aria-hidden="true"></i><span>SVG</span>';
     svgBtn.addEventListener("click", () => {
       const svgMarkup = buildRobotSvg(entry.config);
       downloadSvgMarkup(svgMarkup, `chaps-e-${toSlug(entry.name)}.svg`);
@@ -2381,7 +4183,7 @@ async function renderMyChaps() {
         await exportPngFromSvgMarkup(svgMarkup, `chaps-e-${toSlug(entry.name)}.png`);
       } catch (error) {
         console.error(error);
-        alert(t("export_png_failed"));
+        toastError(t("export_png_failed"));
       }
     });
 
@@ -2394,27 +4196,95 @@ async function renderMyChaps() {
         await exportJpgFromSvgMarkup(svgMarkup, `chaps-e-${toSlug(entry.name)}.jpg`);
       } catch (error) {
         console.error(error);
-        alert(t("export_jpg_failed"));
+        toastError(t("export_jpg_failed"));
       }
     });
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.innerHTML =
-      `<i class="fa-regular fa-trash-can icon-inline" aria-hidden="true"></i><span>${escapeHtml(t("library_delete"))}</span>`;
+    deleteBtn.innerHTML = `<i class="fa-regular fa-trash-can icon-inline" aria-hidden="true"></i><span>${escapeHtml(
+      t("library_delete"),
+    )}</span>`;
     deleteBtn.addEventListener("click", async () => {
       const { error: deleteError } = await supabase.from(DB_TABLE_CHAPES).delete().eq("id", entry.id);
       if (deleteError) {
-        alert(t("library_delete_error", { message: deleteError.message }));
+        toastError(t("library_delete_error", { message: deleteError.message }));
         return;
       }
+      toastInfo(t("library_delete_success"));
       await renderMyChaps();
     });
 
     actions.append(useBtn, svgBtn, pngBtn, jpgBtn, deleteBtn);
 
     card.append(preview, meta, actions);
-    ui.myChapsList.appendChild(card);
+    fragment.appendChild(card);
+  }
+
+  ui.myChapsList.appendChild(fragment);
+
+  setText("mychaps-load-more-label", t("mychaps_load_more"));
+  ui.myChapsLoadMoreBtn.hidden = !myChapsHasMore;
+  ui.myChapsLoadMoreBtn.disabled = false;
+}
+
+function setSavedFavoriteButtonMeta(button, isFavorite) {
+  if (!(button instanceof HTMLElement)) {
+    return;
+  }
+  const normalized = isFavorite === true;
+  const label = normalized ? t("mychaps_fav_remove") : t("mychaps_fav_add");
+  button.dataset.favorite = normalized ? "true" : "false";
+  button.setAttribute("aria-label", label);
+  button.title = label;
+}
+
+function setSavedFavoriteButtonState(button, isFavorite) {
+  if (!(button instanceof HTMLElement)) {
+    return;
+  }
+  const normalized = isFavorite === true;
+  button.classList.toggle("is-active", normalized);
+  button.innerHTML = `<i class="${normalized ? "fa-solid" : "fa-regular"} fa-star" aria-hidden="true"></i>`;
+  setSavedFavoriteButtonMeta(button, normalized);
+}
+
+async function toggleSavedFavorite(entry, button) {
+  if (!entry || !button) {
+    return;
+  }
+  if (!supabaseReady || !supabase) {
+    toastError(t("login_error_supabase"));
+    return;
+  }
+  if (!currentUser || !currentUser.id) {
+    toastError(t("stats_error_connect"));
+    return;
+  }
+
+  const prev = entry.isFavorite === true;
+  const next = !prev;
+  entry.isFavorite = next;
+  setSavedFavoriteButtonState(button, next);
+  button.disabled = true;
+
+  const { error } = await supabase.from(DB_TABLE_CHAPES).update({ is_favorite: next }).eq("id", entry.id);
+
+  button.disabled = false;
+
+  if (error) {
+    entry.isFavorite = prev;
+    setSavedFavoriteButtonState(button, prev);
+    toastError(t("mychaps_fav_update_error", { message: error.message }));
+    return;
+  }
+
+  refreshMyChapsCounts().catch((refreshError) => {
+    console.error(refreshError);
+  });
+
+  if (myChapsFilter === "favorites" && !next) {
+    await renderMyChaps();
   }
 }
 
@@ -2471,13 +4341,13 @@ function emotionEmojiForEyes(eyes) {
 }
 
 function toLabel(value) {
-  if (value === "light") {
-    return t("label_light");
+  const raw = String(value || "");
+  const key = `label_${raw}`;
+  const translated = t(key);
+  if (translated !== key) {
+    return translated;
   }
-  if (value === "dark") {
-    return t("label_dark");
-  }
-  return value
+  return raw
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -2584,8 +4454,8 @@ async function exportPngFromSvgMarkup(svgMarkup, fileName) {
     const scale = 8;
 
     const canvas = document.createElement("canvas");
-    canvas.width = SCENE.width * scale;
-    canvas.height = SCENE.height * scale;
+    canvas.width = EXPORT_SCENE.width * scale;
+    canvas.height = EXPORT_SCENE.height * scale;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -2593,8 +4463,8 @@ async function exportPngFromSvgMarkup(svgMarkup, fileName) {
     }
 
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    ctx.clearRect(0, 0, SCENE.width, SCENE.height);
-    ctx.drawImage(image, 0, 0, SCENE.width, SCENE.height);
+    ctx.clearRect(0, 0, EXPORT_SCENE.width, EXPORT_SCENE.height);
+    ctx.drawImage(image, 0, 0, EXPORT_SCENE.width, EXPORT_SCENE.height);
 
     const pngBlob = await canvasToBlob(canvas, "image/png");
     downloadBlob(pngBlob, fileName);
@@ -2613,8 +4483,8 @@ async function exportJpgFromSvgMarkup(svgMarkup, fileName) {
     const scale = 8;
 
     const canvas = document.createElement("canvas");
-    canvas.width = SCENE.width * scale;
-    canvas.height = SCENE.height * scale;
+    canvas.width = EXPORT_SCENE.width * scale;
+    canvas.height = EXPORT_SCENE.height * scale;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -2625,9 +4495,9 @@ async function exportJpgFromSvgMarkup(svgMarkup, fileName) {
 
     // JPEG doesn't support transparency, so we export on a white background.
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, SCENE.width, SCENE.height);
+    ctx.fillRect(0, 0, EXPORT_SCENE.width, EXPORT_SCENE.height);
 
-    ctx.drawImage(image, 0, 0, SCENE.width, SCENE.height);
+    ctx.drawImage(image, 0, 0, EXPORT_SCENE.width, EXPORT_SCENE.height);
 
     const jpgBlob = await canvasToBlob(canvas, "image/jpeg", 0.92);
     downloadBlob(jpgBlob, fileName);
@@ -2682,6 +4552,7 @@ function setGeneratorInteractive(enabled) {
     ui.eyes,
     ui.head,
     ui.shadow,
+    ui.presetRandom,
     ui.preset1,
     ui.preset2,
     ui.preset3,

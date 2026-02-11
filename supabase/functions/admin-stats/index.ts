@@ -75,6 +75,25 @@ async function fetchCount(supabaseUrl: string, serviceRoleKey: string, path: str
   return { ok: true, count: parseContentRangeCount(res.headers.get("content-range")) };
 }
 
+async function fetchUsers(supabaseUrl: string, serviceRoleKey: string) {
+  const url =
+    `${supabaseUrl}/rest/v1/users` +
+    `?select=user_id,email,nom,prenom,role,created_at,updated_at` +
+    `&order=created_at.desc` +
+    `&limit=200`;
+  const { res, data } = await fetchJson(url, {
+    method: "GET",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+  });
+  if (!res.ok) {
+    return { ok: false, users: [] as unknown[] };
+  }
+  return { ok: true, users: Array.isArray(data) ? data : [] };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -137,9 +156,16 @@ Deno.serve(async (req) => {
     return jsonResponse(500, { error: "count_failed" });
   }
 
+  const users = await fetchUsers(supabaseUrl, serviceRoleKey);
+
+  if (!users.ok) {
+    return jsonResponse(500, { error: "users_failed" });
+  }
+
   return jsonResponse(200, {
     total_saved: saved.count,
     exports_png: png.count,
     exports_jpg: jpg.count,
+    users: users.users,
   });
 });

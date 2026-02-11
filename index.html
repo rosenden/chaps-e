@@ -23,56 +23,94 @@
       rel="stylesheet"
     />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="onechaps.css" />
   </head>
   <body>
     <div id="login-modal" class="login-modal" hidden>
       <div class="login-dialog" role="dialog" aria-modal="true" aria-labelledby="login-title">
-        <img
-          class="login-brand"
-          src="assets/logos/logo-chapsvision-sauge.png"
-          alt="ChapsVision"
-          width="180"
-          height="50"
-        />
-        <h2 id="login-title">Sign in</h2>
-        <p id="login-subtitle" class="login-subtitle">Internal ChapsVision account</p>
+        <div class="login-grid">
+          <div class="login-left">
+            <div class="login-lockup" aria-label="ChapsVision">
+              <img class="login-lockup-logo" src="assets/logos/logo-chapsvision-sauge.png" alt="ChapsVision" />
+              <span class="login-lockup-sep" aria-hidden="true"></span>
+              <div class="login-lockup-text">
+                <p id="login-app-name" class="login-lockup-name">Chaps-e Generator</p>
+                <p id="login-app-by" class="login-lockup-by">by ChapsVision</p>
+              </div>
+            </div>
+            <h2 id="login-title">Sign in</h2>
+            <p id="login-subtitle" class="login-subtitle">Internal ChapsVision account</p>
 
-        <form id="login-form" class="login-form">
-          <label>
-            <span id="login-email-label">Email</span>
-            <input
-              id="login-email"
-              type="email"
-              autocomplete="email"
-              placeholder="name@company.com"
-              required
-            />
-          </label>
+            <form id="login-form" class="login-form">
+              <label>
+                <span id="login-email-label">Email</span>
+                <input
+                  id="login-email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="name@company.com"
+                  required
+                />
+              </label>
 
-          <label>
-            <span id="login-password-label">Password</span>
-            <input
-              id="login-password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="Enter your password"
-              required
-            />
-          </label>
+              <label>
+                <span id="login-password-label">Password</span>
+                <input
+                  id="login-password"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
+                  required
+                />
+              </label>
 
-          <p id="login-error" class="login-error" aria-live="polite"></p>
+              <p id="login-error" class="login-error" aria-live="polite"></p>
 
-          <div class="modal-actions">
-            <button id="login-submit" type="submit">Sign in</button>
+              <div class="modal-actions">
+                <button id="login-submit" type="submit">Sign in</button>
+              </div>
+            </form>
           </div>
-        </form>
 
+          <aside class="login-slider" aria-label="App highlights">
+            <div class="login-slider-viewport">
+              <article class="login-slide is-active" data-slide="0" aria-hidden="false">
+                <div id="login-slide-1-illu" class="login-slide-illu" aria-hidden="true"></div>
+                <h3 id="login-slide-1-title" class="login-slide-title">Assemble your Chap-e</h3>
+                <p id="login-slide-1-desc" class="login-slide-desc">
+                  Pick arms, eyes and head to craft a mascot in seconds.
+                </p>
+              </article>
+              <article class="login-slide" data-slide="1" aria-hidden="true">
+                <div id="login-slide-2-illu" class="login-slide-illu" aria-hidden="true"></div>
+                <h3 id="login-slide-2-title" class="login-slide-title">Export clean assets</h3>
+                <p id="login-slide-2-desc" class="login-slide-desc">
+                  Download your robot as SVG, PNG or JPG.
+                </p>
+              </article>
+              <article class="login-slide" data-slide="2" aria-hidden="true">
+                <div id="login-slide-3-illu" class="login-slide-illu" aria-hidden="true"></div>
+                <h3 id="login-slide-3-title" class="login-slide-title">Keep a library</h3>
+                <p id="login-slide-3-desc" class="login-slide-desc">
+                  Save your favorites to your account and reuse them anytime.
+                </p>
+              </article>
+            </div>
+            <div class="login-dots" role="tablist" aria-label="Highlights navigation">
+              <button class="login-dot is-active" type="button" data-slide="0" aria-label="Slide 1"></button>
+              <button class="login-dot" type="button" data-slide="1" aria-label="Slide 2"></button>
+              <button class="login-dot" type="button" data-slide="2" aria-label="Slide 3"></button>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
 
     <div id="save-modal" class="save-modal" hidden>
       <div class="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-title">
+        <button id="save-close" class="modal-close" type="button" aria-label="Close dialog">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
         <h2 id="save-title">Name your Chap-e</h2>
         <p id="save-subtitle" class="login-subtitle">This name will be used in your library.</p>
 
@@ -101,6 +139,9 @@
 
     <div id="password-modal" class="save-modal" hidden>
       <div class="password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-title">
+        <button id="password-close" class="modal-close" type="button" aria-label="Close dialog">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
         <h2 id="password-title">Change password</h2>
         <p id="password-subtitle" class="login-subtitle">Set your new account password.</p>
 
@@ -139,8 +180,11 @@
       </div>
     </div>
 
-    <div id="create-user-modal" class="save-modal" hidden>
-      <div class="create-user-dialog" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+	    <div id="create-user-modal" class="save-modal" hidden>
+	      <div class="create-user-dialog" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+        <button id="create-user-close" class="modal-close" type="button" aria-label="Close dialog">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
         <h2 id="create-user-title">Create user</h2>
         <p id="create-user-subtitle" class="login-subtitle">Create a new active account.</p>
 
@@ -197,13 +241,38 @@
             />
           </label>
 
-          <label>
-            <span id="create-user-role-label">Role</span>
-            <select id="create-user-role" required>
-              <option id="create-user-role-user" value="user">User</option>
-              <option id="create-user-role-admin" value="admin">Admin</option>
+          <div class="form-separator" aria-hidden="true"></div>
+
+          <div class="picker" data-picker="create-user-role">
+            <button id="create-user-role-trigger" class="picker-trigger" type="button" aria-expanded="false">
+              <span id="create-user-role-label" class="picker-trigger-label">Role</span>
+              <span id="create-user-role-current" class="picker-trigger-current"></span>
+              <span class="picker-trigger-chevron" aria-hidden="true">
+                <i class="fa-solid fa-chevron-down"></i>
+              </span>
+            </button>
+            <div id="create-user-role-menu" class="picker-menu" hidden>
+              <button type="button" class="picker-item" data-value="user">
+                <span class="picker-item-preview">
+                  <i class="fa-regular fa-circle-user" aria-hidden="true"></i>
+                </span>
+                <span id="create-user-role-user" class="picker-item-label">User</span>
+              </button>
+              <button type="button" class="picker-item" data-value="admin">
+                <span class="picker-item-preview">
+                  <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                </span>
+                <span id="create-user-role-admin" class="picker-item-label">Admin</span>
+              </button>
+            </div>
+
+            <select id="create-user-role" class="native-select" aria-hidden="true" tabindex="-1" required>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
             </select>
-          </label>
+          </div>
+
+          <div class="form-separator" aria-hidden="true"></div>
 
           <p id="create-user-error" class="save-error" aria-live="polite"></p>
 
@@ -212,10 +281,56 @@
             <button id="create-user-confirm-btn" type="submit">Create user</button>
           </div>
         </form>
-      </div>
-    </div>
+	      </div>
+	    </div>
 
-    <div id="app-shell" class="app-shell">
+	    <div id="diagnostics-modal" class="save-modal" hidden>
+	      <div class="diagnostics-dialog" role="dialog" aria-modal="true" aria-labelledby="diagnostics-modal-title">
+	        <button id="diagnostics-modal-close" class="modal-close" type="button" aria-label="Close dialog">
+	          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+	        </button>
+	        <h2 id="diagnostics-modal-title">Diagnostics</h2>
+	        <p id="diagnostics-modal-subtitle" class="login-subtitle">Checklist to validate the app wiring.</p>
+
+	        <div class="diagnostics-actions">
+	          <button id="diagnostics-modal-run" type="button">
+	            <i class="fa-solid fa-play icon-inline" aria-hidden="true"></i>
+	            <span id="diagnostics-modal-run-label">Run diagnostics</span>
+	          </button>
+	        </div>
+
+	        <div id="diagnostics-modal-list" class="diagnostics-list" aria-live="polite"></div>
+	      </div>
+	    </div>
+
+	    <div id="app-shell" class="app-shell">
+      <header class="topbar" aria-label="Main navigation">
+        <button
+          id="mobile-nav-toggle"
+          class="topbar-toggle"
+          type="button"
+          aria-label="Open menu"
+          aria-expanded="false"
+        >
+          <i class="fa-solid fa-bars icon-inline" aria-hidden="true"></i>
+        </button>
+        <button id="topbar-home" class="topbar-home" type="button" aria-label="Home">
+          <img
+            class="topbar-icon"
+            src="assets/logos/icone-chapsvision-sauge.png"
+            alt="ChapsVision"
+            width="28"
+            height="28"
+          />
+          <span class="topbar-copy">
+            <span class="topbar-title">Chaps-e Generator</span>
+            <span class="topbar-sub">by ChapsVision</span>
+          </span>
+        </button>
+      </header>
+
+      <div id="mobile-nav-overlay" class="mobile-nav-overlay" hidden></div>
+
       <aside class="sidebar">
         <div class="brand-block">
           <button id="brand-home" class="brand-row brand-home" type="button" aria-label="Home">
@@ -234,6 +349,7 @@
         </div>
 
         <nav class="sidebar-nav">
+          <p id="sidebar-section-chapse" class="sidebar-section-label">Chaps-e</p>
           <button id="nav-generator" class="nav-btn is-active" type="button" data-view="generator">
             <i class="fa-regular fa-image icon-inline" aria-hidden="true"></i>
             <span id="nav-generator-label">Generator</span>
@@ -246,7 +362,23 @@
             <i class="fa-regular fa-circle-question icon-inline" aria-hidden="true"></i>
             <span id="nav-guide-label">Guide</span>
           </button>
-        </nav>
+
+          <p id="sidebar-section-profile" class="sidebar-section-label sidebar-section-label--profile">Profile</p>
+	          <div class="sidebar-profile-actions" aria-label="Profile actions">
+	            <button id="lang-toggle-btn-mobile" class="nav-btn nav-btn--secondary" type="button">
+	              <i class="fa-solid fa-language icon-inline" aria-hidden="true"></i>
+	              <span id="lang-toggle-label-mobile">Switch to French</span>
+	            </button>
+	            <button id="password-btn-mobile" class="nav-btn nav-btn--secondary" type="button">
+	              <i class="fa-regular fa-pen-to-square icon-inline" aria-hidden="true"></i>
+	              <span id="password-btn-label-mobile">Change password</span>
+	            </button>
+	            <button id="stats-btn-mobile" class="nav-btn nav-btn--secondary" type="button" hidden>
+	              <i class="fa-solid fa-chart-simple icon-inline" aria-hidden="true"></i>
+	              <span id="stats-btn-label-mobile">Stats</span>
+	            </button>
+	          </div>
+	        </nav>
 
         <div class="sidebar-profile">
           <div id="profile-avatar" class="profile-avatar" aria-hidden="true">CV</div>
@@ -262,32 +394,31 @@
               aria-expanded="false"
               aria-label="Menu profil"
             >
-              <i class="fa-solid fa-ellipsis icon-inline" aria-hidden="true"></i>
+              <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
             </button>
-            <div id="profile-menu" class="profile-menu" hidden>
-              <button id="lang-toggle-btn" type="button">
-                <i class="fa-solid fa-language icon-inline" aria-hidden="true"></i>
-                <span id="lang-toggle-label">Switch to French</span>
-              </button>
-              <button id="stats-btn" type="button" hidden>
-                <i class="fa-solid fa-chart-simple icon-inline" aria-hidden="true"></i>
-                <span id="stats-btn-label">Stats</span>
-              </button>
-              <button id="password-btn" type="button">
-                <i class="fa-regular fa-pen-to-square icon-inline" aria-hidden="true"></i>
-                <span id="password-btn-label">Change password</span>
-              </button>
-              <button id="create-user-btn" type="button" hidden>
-                <i class="fa-solid fa-user-plus icon-inline" aria-hidden="true"></i>
-                <span id="create-user-btn-label">Create user</span>
-              </button>
-              <button id="logout-btn" type="button">
-                <i class="fa-regular fa-circle-user icon-inline" aria-hidden="true"></i>
-                <span id="logout-btn-label">Sign out</span>
-              </button>
-            </div>
-          </div>
-        </div>
+            <button id="logout-btn-quick" class="profile-logout-quick" type="button" aria-label="Sign out">
+              <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            </button>
+	            <div id="profile-menu" class="profile-menu" hidden>
+	              <button id="lang-toggle-btn" type="button">
+	                <i class="fa-solid fa-language icon-inline" aria-hidden="true"></i>
+	                <span id="lang-toggle-label">Switch to French</span>
+	              </button>
+	              <button id="password-btn" type="button">
+	                <i class="fa-regular fa-pen-to-square icon-inline" aria-hidden="true"></i>
+	                <span id="password-btn-label">Change password</span>
+	              </button>
+	              <button id="stats-btn" type="button" hidden>
+	                <i class="fa-solid fa-chart-simple icon-inline" aria-hidden="true"></i>
+	                <span id="stats-btn-label">Stats</span>
+	              </button>
+	              <button id="logout-btn" type="button">
+	                <i class="fa-regular fa-circle-user icon-inline" aria-hidden="true"></i>
+	                <span id="logout-btn-label">Sign out</span>
+	              </button>
+	            </div>
+	          </div>
+	        </div>
       </aside>
 
       <main class="content">
@@ -302,7 +433,7 @@
                 <div class="visual-controls">
                   <div class="picker" data-picker="skin">
                     <button id="picker-skin-trigger" class="picker-trigger" type="button" aria-expanded="false">
-                      <span class="picker-trigger-label">Skin</span>
+                      <span id="picker-skin-label" class="picker-trigger-label">Skin</span>
                       <span id="picker-skin-current" class="picker-trigger-current"></span>
                       <span class="picker-trigger-chevron" aria-hidden="true">
                         <i class="fa-solid fa-chevron-down"></i>
@@ -371,15 +502,20 @@
               </div>
 
               <div class="actions">
-                <button id="preset-1" type="button" aria-label="Preset Example 1" title="Preset Example 1">
-                  <span id="preset-1-emoji" class="preset-emoji" aria-hidden="true"></span>
-                </button>
-                <button id="preset-2" type="button" aria-label="Preset Example 2" title="Preset Example 2">
-                  <span id="preset-2-emoji" class="preset-emoji" aria-hidden="true"></span>
-                </button>
-                <button id="preset-3" type="button" aria-label="Preset Example 3" title="Preset Example 3">
-                  <span id="preset-3-emoji" class="preset-emoji" aria-hidden="true"></span>
-                </button>
+                <div class="preset-row">
+                  <button id="preset-random" type="button" aria-label="Random" title="Random">
+                    <span class="preset-emoji" aria-hidden="true">🪄</span>
+                  </button>
+                  <button id="preset-1" type="button" aria-label="Preset Example 1" title="Preset Example 1">
+                    <span id="preset-1-emoji" class="preset-emoji" aria-hidden="true"></span>
+                  </button>
+                  <button id="preset-2" type="button" aria-label="Preset Example 2" title="Preset Example 2">
+                    <span id="preset-2-emoji" class="preset-emoji" aria-hidden="true"></span>
+                  </button>
+                  <button id="preset-3" type="button" aria-label="Preset Example 3" title="Preset Example 3">
+                    <span id="preset-3-emoji" class="preset-emoji" aria-hidden="true"></span>
+                  </button>
+                </div>
                 <div class="save-dropdown">
                   <button id="save-menu-trigger" type="button" aria-expanded="false">
                     <i class="fa-regular fa-floppy-disk icon-inline" aria-hidden="true"></i>
@@ -418,54 +554,161 @@
 
         <section id="view-my-chaps" class="view">
           <header class="mychaps-header">
-            <h2 id="mychaps-title">My library</h2>
-            <p id="mychaps-subtitle">Your saved Chap-e for your account.</p>
+            <div class="mychaps-header-inner">
+              <h2 id="mychaps-title">My library</h2>
+              <div id="mychaps-tabs" class="mychaps-tabs" role="tablist" aria-label="Library filters"></div>
+            </div>
           </header>
           <div id="mychaps-list" class="mychaps-list"></div>
-        </section>
-
-        <section id="view-guide" class="view">
-          <header class="guide-header">
-            <h2 id="guide-title">Usage guide</h2>
-            <p id="guide-subtitle">Do and don't rules for using Chaps-e.</p>
-          </header>
-          <div class="guide-nav" aria-label="Guide navigation">
-            <button id="guide-prev-btn" class="guide-nav-btn" type="button">
-              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-              <span id="guide-prev-label">Previous</span>
-            </button>
-            <div id="guide-tabs" class="guide-tabs" role="tablist" aria-label="Guide rules"></div>
-            <button id="guide-next-btn" class="guide-nav-btn" type="button">
-              <span id="guide-next-label">Next</span>
-              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          <div class="mychaps-footer">
+            <button id="mychaps-load-more" type="button" hidden>
+              <i class="fa-solid fa-arrow-down icon-inline" aria-hidden="true"></i>
+              <span id="mychaps-load-more-label">Load more</span>
             </button>
           </div>
-          <div id="guide-cases" class="guide-cases"></div>
+          <footer class="page-footer" aria-label="ChapsVision">
+            <img
+              class="page-footer-logo"
+              src="assets/logos/icone-chapsvision-sauge.png"
+              alt="ChapsVision"
+              width="44"
+              height="44"
+              loading="lazy"
+            />
+          </footer>
         </section>
 
-        <section id="view-stats" class="view">
+	        <section id="view-guide" class="view">
+	          <div class="guide-layout">
+	            <section class="panel guide-panel" aria-label="Guide navigation">
+	              <header class="panel-header">
+	                <h2 id="guide-panel-title">Usage guide</h2>
+	              </header>
+
+	              <div id="guide-tabs" class="guide-rule-list" aria-label="Guide rules"></div>
+
+	              <div class="guide-panel-actions" aria-label="Guide navigation">
+	                <button id="guide-prev-btn" class="guide-panel-nav-btn" type="button">
+	                  <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+	                  <span id="guide-prev-label">Previous</span>
+	                </button>
+	                <button id="guide-next-btn" class="guide-panel-nav-btn" type="button">
+	                  <span id="guide-next-label">Next</span>
+	                  <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+	                </button>
+	              </div>
+	            </section>
+
+	            <div class="guide-main">
+	              <div id="guide-cases" class="guide-cases"></div>
+	              <footer class="page-footer" aria-label="ChapsVision">
+	                <img
+	                  class="page-footer-logo"
+	                  src="assets/logos/icone-chapsvision-sauge.png"
+	                  alt="ChapsVision"
+	                  width="44"
+	                  height="44"
+	                  loading="lazy"
+	                />
+	              </footer>
+	            </div>
+	          </div>
+	        </section>
+
+	        <section id="view-stats" class="view">
+	          <header class="mychaps-header admin-header">
+	            <div class="mychaps-header-inner">
+	              <h2 id="stats-title">Administration</h2>
+	              <p id="stats-subtitle" class="admin-subtitle">Stats across all users.</p>
+	              <div class="admin-shortcuts" aria-label="Admin shortcuts">
+	                <button id="admin-create-user-shortcut" type="button">
+	                  <i class="fa-solid fa-user-plus icon-inline" aria-hidden="true"></i>
+	                  <span id="admin-create-user-shortcut-label">Create user</span>
+	                </button>
+	                <button id="admin-diagnostics-shortcut" type="button">
+	                  <i class="fa-solid fa-list-check icon-inline" aria-hidden="true"></i>
+	                  <span id="admin-diagnostics-shortcut-label">Diagnostics</span>
+	                </button>
+	              </div>
+	            </div>
+	          </header>
+	          <div class="admin-body">
+	            <section class="admin-section admin-section--stats" aria-label="Statistics">
+	              <div class="admin-section-head">
+	                <h3 id="admin-section-stats-title">Statistics</h3>
+	              </div>
+	              <p id="stats-error" class="stats-error" aria-live="polite"></p>
+	              <div class="stats-grid">
+	                <article class="stat-card">
+	                  <p id="stats-total-saved-label" class="stat-label">Saved in library</p>
+	                  <p id="stat-total-saved" class="stat-value">—</p>
+	                </article>
+	                <article class="stat-card">
+	                  <p id="stats-exports-png-label" class="stat-label">PNG exports</p>
+	                  <p id="stat-exports-png" class="stat-value">—</p>
+	                </article>
+	                <article class="stat-card">
+	                  <p id="stats-exports-jpg-label" class="stat-label">JPG exports</p>
+	                  <p id="stat-exports-jpg" class="stat-value">—</p>
+	                </article>
+	              </div>
+	            </section>
+
+	            <section class="admin-section admin-section--users" aria-label="Users">
+	              <div class="admin-section-head">
+	                <h3 id="admin-section-users-title">Users</h3>
+	              </div>
+	              <p id="admin-users-error" class="stats-error" aria-live="polite"></p>
+	              <div class="admin-users-table-wrap" role="region" aria-label="Users table" tabindex="0">
+	                <table class="admin-users-table">
+	                  <thead>
+	                    <tr>
+	                      <th id="admin-users-th-email" scope="col">Email</th>
+	                      <th id="admin-users-th-name" scope="col">Name</th>
+	                      <th id="admin-users-th-role" scope="col">Role</th>
+	                      <th id="admin-users-th-created" scope="col">Created</th>
+	                      <th id="admin-users-th-id" scope="col">User ID</th>
+	                    </tr>
+	                  </thead>
+	                  <tbody id="admin-users-tbody"></tbody>
+	                </table>
+	              </div>
+	            </section>
+	          </div>
+	        </section>
+
+        <section id="view-diagnostics" class="view">
           <header class="stats-header">
-            <h2 id="stats-title">Admin stats</h2>
-            <p id="stats-subtitle">Stats across all users.</p>
+            <h2 id="diagnostics-title">Diagnostics</h2>
+            <p id="diagnostics-subtitle">Checklist to validate the app wiring.</p>
           </header>
-          <p id="stats-error" class="stats-error" aria-live="polite"></p>
-          <div class="stats-grid">
-            <article class="stat-card">
-              <p id="stats-total-saved-label" class="stat-label">Saved in library</p>
-              <p id="stat-total-saved" class="stat-value">—</p>
-            </article>
-            <article class="stat-card">
-              <p id="stats-exports-png-label" class="stat-label">PNG exports</p>
-              <p id="stat-exports-png" class="stat-value">—</p>
-            </article>
-            <article class="stat-card">
-              <p id="stats-exports-jpg-label" class="stat-label">JPG exports</p>
-              <p id="stat-exports-jpg" class="stat-value">—</p>
-            </article>
+          <div class="diagnostics-actions">
+            <button id="diagnostics-run" type="button">
+              <i class="fa-solid fa-play icon-inline" aria-hidden="true"></i>
+              <span id="diagnostics-run-label">Run diagnostics</span>
+            </button>
           </div>
+          <div id="diagnostics-list" class="diagnostics-list" aria-live="polite"></div>
         </section>
       </main>
+
+      <nav id="bottom-nav" class="bottom-nav" aria-label="Mobile navigation">
+        <button id="bottom-nav-generator" class="bottom-nav-btn is-active" type="button" data-view="generator">
+          <i class="fa-regular fa-image" aria-hidden="true"></i>
+          <span id="bottom-nav-generator-label">Generator</span>
+        </button>
+        <button id="bottom-nav-my-chaps" class="bottom-nav-btn" type="button" data-view="my-chaps">
+          <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+          <span id="bottom-nav-my-chaps-label">My library</span>
+        </button>
+        <button id="bottom-nav-guide" class="bottom-nav-btn" type="button" data-view="guide">
+          <i class="fa-regular fa-circle-question" aria-hidden="true"></i>
+          <span id="bottom-nav-guide-label">Guide</span>
+        </button>
+      </nav>
     </div>
+
+    <div id="toast-stack" class="toast-stack" aria-live="polite" aria-relevant="additions"></div>
 
     <script src="config.js"></script>
     <script type="module" src="app.js"></script>

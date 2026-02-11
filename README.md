@@ -15,7 +15,7 @@ Application web statique (GitHub Pages) pour assembler les pieces SVG de `assets
 
 ## Stack
 
-- Front: `index.html` + `styles.css` + `app.js` (pas de build)
+- Front: `index.html` + `onechaps.css` + `app.js` (pas de build)
 - Deploiement: GitHub Pages via `.github/workflows/deploy-pages.yml`
 - Back: Supabase
   - Auth email/password (Supabase Auth)

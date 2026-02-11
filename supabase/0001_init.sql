@@ -15,6 +15,7 @@ create table if not exists public.chapse (
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null,
   config_json jsonb not null,
+  is_favorite boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -173,3 +174,9 @@ create policy export_events_delete_own
 on public.export_events
 for delete
 using (auth.uid() = user_id);
+
+-- Ensure PostgREST roles can access the tables (RLS still applies).
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.users to anon, authenticated;
+grant select, insert, update, delete on public.chapse to anon, authenticated;
+grant select, insert, update, delete on public.export_events to anon, authenticated;
